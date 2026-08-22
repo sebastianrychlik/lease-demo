@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/deploy-local.sh — luxsoft-dxc-demo
+# scripts/deploy-local.sh — lease-demo
 # Starts the full stack locally using Docker Compose.
 # =============================================================================
 

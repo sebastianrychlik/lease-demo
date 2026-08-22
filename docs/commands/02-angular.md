@@ -57,7 +57,7 @@ cd frontend
 npx ng build --configuration development
 ```
 
-Output: `frontend/dist/luxsoft-dxc-demo/`
+Output: `frontend/dist/lease-demo/`
 
 ### Production build
 

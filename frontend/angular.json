@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "luxsoft-dxc-demo": {
+    "lease-demo": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -25,7 +25,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/luxsoft-dxc-demo",
+            "outputPath": "dist/lease-demo",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
@@ -36,9 +36,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
+            "styles": ["src/styles.scss"],
             "scripts": []
           },
           "configurations": {
@@ -78,10 +76,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "luxsoft-dxc-demo:build:production"
+              "buildTarget": "lease-demo:build:production"
             },
             "development": {
-              "buildTarget": "luxsoft-dxc-demo:build:development"
+              "buildTarget": "lease-demo:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -89,16 +87,13 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "luxsoft-dxc-demo:build"
+            "buildTarget": "lease-demo:build"
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": [
-              "src/**/*.ts",
-              "src/**/*.html"
-            ]
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
         }
       }

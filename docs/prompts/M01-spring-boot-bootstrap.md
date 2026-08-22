@@ -4,7 +4,7 @@
 
 You are a Senior Java Architect and Spring Boot Engineer.
 
-Your task is to implement milestone M0.1 of the Luxoft DXC Demo project.
+Your task is to implement milestone M0.1 of the LeaseDemo project.
 
 This repository is intended to become a public GitHub portfolio project
 demonstrating professional enterprise development practices.
@@ -72,7 +72,7 @@ Example response:
 ```json
 {
     "status": "UP",
-    "application": "luxsoft-dxc-demo",
+    "application": "lease-demo",
     "version": "0.1.0"
 }
 ```

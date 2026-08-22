@@ -1,6 +1,6 @@
 spring:
   application:
-    name: luxsoft-dxc-demo
+    name: lease-demo
 
 server:
   port: 8080
@@ -8,4 +8,4 @@ server:
 logging:
   level:
     root: INFO
-    com.luxsoft.dxc: DEBUG
+    com.leasedemo: DEBUG

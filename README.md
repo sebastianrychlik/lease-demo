@@ -1,4 +1,4 @@
-# luxsoft-dxc-demo
+# lease-demo
 
 Purpose-built technical interview demo showcasing end-to-end enterprise application development with Angular, Spring Boot, PostgreSQL, Docker, Cloud Run, REST APIs, SSE, testing and clean architecture.
 
@@ -33,7 +33,7 @@ Three-tier enterprise architecture:
 ## Folder Structure
 
 ```
-luxsoft-dxc-demo/
+lease-demo/
 ├── frontend/          # Angular 18 SPA
 ├── backend/           # Spring Boot 3.x REST API
 ├── docker/            # Docker Compose configuration
@@ -99,7 +99,7 @@ Example response:
 ```json
 {
   "status": "UP",
-  "application": "luxsoft-dxc-demo",
+  "application": "lease-demo",
   "version": "0.1.0"
 }
 ```
@@ -116,8 +116,8 @@ GET http://localhost:8080/actuator/health
 backend/
 ├── src/
 │   ├── main/
-│   │   ├── java/com/luxsoft/dxc/
-│   │   │   ├── LuxsoftDxcDemoApplication.java   # Application entry point
+│   │   ├── java/com/lease-demo
+│   │   │   ├── LeaseDemoApplication.java   # Application entry point
 │   │   │   ├── config/                           # Spring configuration classes
 │   │   │   ├── controller/                       # REST controllers
 │   │   │   ├── dto/                              # Data Transfer Objects
@@ -133,8 +133,8 @@ backend/
 │   │       ├── application-local.yml             # Local profile
 │   │       └── application-prod.yml              # Production profile
 │   └── test/
-│       └── java/com/luxsoft/dxc/
-│           └── LuxsoftDxcDemoApplicationTests.java
+│       └── java/com/lease-demo
+│           └── LeaseDemoApplicationTests.java
 └── pom.xml
 ```
 ### Frontend

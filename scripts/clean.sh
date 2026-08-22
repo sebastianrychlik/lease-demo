@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/clean.sh — luxsoft-dxc-demo
+# scripts/clean.sh — lease-demo
 # Removes all build artifacts and generated files.
 # =============================================================================
 

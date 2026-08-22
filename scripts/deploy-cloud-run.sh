@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/deploy-cloud-run.sh — luxsoft-dxc-demo
+# scripts/deploy-cloud-run.sh — lease-demo
 # Builds and deploys the application to Google Cloud Run.
 # =============================================================================
 
