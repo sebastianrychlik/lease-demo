@@ -204,3 +204,33 @@ All feature routes use `loadComponent` or `loadChildren` for lazy loading:
 ```
 
 To add a new feature route, append an entry to `APP_ROUTES` in `app.routes.ts`.
+
+---
+
+## Exchange Rates feature (M2.0)
+
+The exchange rates feature is available at `/exchange-rates`.
+
+It is lazily loaded via `loadChildren` from:
+
+```
+src/app/features/exchange-rates/exchange-rates.routes.ts
+```
+
+Feature structure:
+
+```
+src/app/features/exchange-rates/
+├── exchange-rates.routes.ts        # Lazy route definitions
+├── models/
+│   └── exchange-rate.model.ts      # ExchangeRate, ExchangeRateResponse interfaces
+├── pages/
+│   └── exchange-rates-page.component.ts  # Table + signals state management
+└── services/
+    └── exchange-rate.service.ts    # Delegates to ApiService
+```
+
+The component uses Angular Signals to represent four explicit states:
+`loading` | `success` | `empty` | `error`
+
+Navigate to `http://localhost:4200/exchange-rates` to view the feature.
