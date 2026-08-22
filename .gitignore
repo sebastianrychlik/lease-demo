@@ -91,3 +91,4 @@ surefire-reports/
 build/
 out/
 .gradle/
+infrastructure/keycloak/data/
