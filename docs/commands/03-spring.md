@@ -65,4 +65,61 @@ Remove all build output.
 cd backend
 mvn clean
 ```
-<!-- TODO: Document all Maven / Spring Boot commands used in this project (build, test, run, package). -->
+---
+
+## Verify (build + test)
+
+Compile sources, run all tests, and verify the build succeeds.
+
+```bash
+cd backend
+mvn clean verify
+```
+
+**Result (M2.0):** BUILD SUCCESS — context loads, Spring beans registered, 1 test passed.
+
+---
+
+## Exchange Rates feature (M2.0)
+
+The exchange rates endpoint is registered at:
+
+```
+GET http://localhost:8080/api/exchange-rates
+```
+
+Example response:
+
+```json
+{
+  "tableNo": "150/A/NBP/2025",
+  "effectiveDate": "2025-08-01",
+  "rates": [
+    {
+      "code": "USD",
+      "name": "dolar amerykański",
+      "midRate": 3.9245
+    }
+  ]
+}
+```
+
+The endpoint fetches live data from the Polish National Bank (NBP) public API using `RestClient`.
+
+If the NBP API is unavailable, the endpoint returns HTTP 502 with a `ProblemDetail` body.
+
+### Backend feature package
+
+```
+com.luxsoft.dxc.exchange/
+├── client/         # NbpClient — RestClient wrapper
+├── config/         # NbpClientConfig — RestClient Spring Bean
+├── controller/     # ExchangeRateController — GET /api/exchange-rates
+├── dto/external/   # NbpTableDto, NbpRateDto — NBP JSON DTOs
+├── dto/response/   # ExchangeRateResponse, ExchangeRateDto — public API DTOs
+├── exception/      # NbpClientException
+├── mapper/         # ExchangeRateMapper (MapStruct)
+└── service/        # ExchangeRateService
+```
+
+See `docs/development/milestones/M2.0-exchange-rates.md` for full architecture details.

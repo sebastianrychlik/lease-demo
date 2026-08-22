@@ -74,7 +74,27 @@ The application starts on `http://localhost:8080` with the `local` profile activ
 GET http://localhost:8080/api/health
 ```
 
+#### Exchange rates endpoint
+
+```
+GET http://localhost:8080/api/exchange-rates
+```
+
+Returns current NBP Table A exchange rates. Fetches live data from the Polish National Bank (NBP) public API.
+
 Example response:
+
+```json
+{
+  "tableNo": "150/A/NBP/2025",
+  "effectiveDate": "2025-08-01",
+  "rates": [
+    { "code": "USD", "name": "dolar amerykański", "midRate": 3.9245 }
+  ]
+}
+```
+
+#### Health endpoint response example
 
 ```json
 {
@@ -167,6 +187,8 @@ See `docs/commands/02-angular.md` for full command reference.
 See `docs/development/milestones/M1.0-angular-foundation.md` for architecture details.
 
 See `docs/development/milestones/M1.1-frontend-backend-integration.md` for integration details.
+
+See `docs/development/milestones/M2.0-exchange-rates.md` for exchange rates feature details.
 
 ## Deployment
 

@@ -1,5 +1,6 @@
 package com.luxsoft.dxc.exception;
 
+import com.luxsoft.dxc.exchange.exception.NbpClientException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -8,6 +9,21 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    /**
+     * Handles NBP API integration failures.
+     *
+     * <p>Returns HTTP 502 Bad Gateway when the upstream NBP API is unavailable
+     * or returns an unexpected response. Low-level client exceptions are never
+     * exposed directly to the caller.
+     */
+    @ExceptionHandler(NbpClientException.class)
+    public ProblemDetail handleNbpClientException(NbpClientException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problemDetail.setTitle("NBP API Unavailable");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex) {
