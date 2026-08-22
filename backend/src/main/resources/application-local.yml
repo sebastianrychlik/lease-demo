@@ -1,9 +1,22 @@
 spring:
   application:
     name: lease-demo
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Keycloak OIDC issuer URI for local development.
+          # Spring Security fetches JWK set from this issuer's discovery endpoint
+          # at startup and validates incoming access tokens locally.
+          issuer-uri: http://localhost:8081/realms/lease-demo
 
 server:
   port: 8080
+
+application:
+  cors:
+    # Angular dev server origin — the only allowed cross-origin caller locally.
+    allowed-origins: http://localhost:4200
 
 logging:
   level:
