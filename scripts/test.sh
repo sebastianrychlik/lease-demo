@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/test.sh — luxsoft-dxc-demo
+# scripts/test.sh — lease-demo
 # Runs all tests for backend and frontend.
 # =============================================================================
 

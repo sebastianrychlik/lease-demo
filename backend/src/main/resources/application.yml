@@ -1,6 +1,6 @@
 spring:
   application:
-    name: luxsoft-dxc-demo
+    name: lease-demo
   profiles:
     active: local
 

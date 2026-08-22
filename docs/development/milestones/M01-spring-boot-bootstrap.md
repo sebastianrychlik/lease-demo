@@ -19,11 +19,11 @@ implemented. No database, JPA, Security, or Flyway dependencies are introduced.
 |------|--------|
 | Maven project | `pom.xml` with Spring Boot 3.3.4 parent, Java 21, all declared dependencies |
 | Spring Boot configuration | `application.yml`, `application-local.yml`, `application-prod.yml` |
-| Application entry point | `LuxsoftDxcDemoApplication` — `@SpringBootApplication` main class |
+| Application entry point | `LeaseDemoApplication` — `@SpringBootApplication` main class |
 | Package structure | 10 packages: `config`, `controller`, `dto`, `entity`, `exception`, `mapper`, `model`, `repository`, `service`, `util` |
 | Health endpoint | `GET /api/health` — returns `status`, `application`, `version` |
 | Global exception handler | `GlobalExceptionHandler` using RFC 9457 `ProblemDetail` |
-| Spring context test | `LuxsoftDxcDemoApplicationTests` — verifies context loads |
+| Spring context test | `LeaseDemoApplicationTests` — verifies context loads |
 | README update | Backend prerequisites, build, run, health endpoint, project structure |
 | Command documentation | `docs/commands/03-spring.md` |
 
@@ -77,36 +77,36 @@ implemented. No database, JPA, Security, or Flyway dependencies are introduced.
 | File | Purpose |
 |------|---------|
 | `backend/src/main/resources/application.yml` | Base configuration — app name, active profile (`local`), server port, Actuator exposure, custom `application.version` property |
-| `backend/src/main/resources/application-local.yml` | Local profile — DEBUG logging for `com.luxsoft.dxc` |
-| `backend/src/main/resources/application-prod.yml` | Production profile — WARN root logging, INFO for `com.luxsoft.dxc` |
+| `backend/src/main/resources/application-local.yml` | Local profile — DEBUG logging for `com.lease-demo` |
+| `backend/src/main/resources/application-prod.yml` | Production profile — WARN root logging, INFO for `com.lease-demo` |
 
 ### Java — Main Sources
 
 | File | Package | Purpose |
 |------|---------|---------|
-| `LuxsoftDxcDemoApplication.java` | `com.luxsoft.dxc` | Application entry point |
-| `ApplicationProperties.java` | `com.luxsoft.dxc.config` | `@ConfigurationProperties(prefix = "application")` — binds `application.version` |
-| `WebMvcConfig.java` | `com.luxsoft.dxc.config` | `WebMvcConfigurer` stub — web layer customisation placeholder |
-| `HealthController.java` | `com.luxsoft.dxc.controller` | `GET /api/health` — delegates to `HealthService` |
-| `HealthResponse.java` | `com.luxsoft.dxc.dto` | Java record — `status`, `application`, `version` |
-| `GlobalExceptionHandler.java` | `com.luxsoft.dxc.exception` | `@RestControllerAdvice` — maps unhandled exceptions to RFC 9457 `ProblemDetail` |
-| `HealthService.java` | `com.luxsoft.dxc.service` | Constructs and returns `HealthResponse` from `ApplicationProperties` |
+| `LeaseDemoApplication.java` | `com.lease-demo` | Application entry point |
+| `ApplicationProperties.java` | `com.lease-demo.config` | `@ConfigurationProperties(prefix = "application")` — binds `application.version` |
+| `WebMvcConfig.java` | `com.lease-demo.config` | `WebMvcConfigurer` stub — web layer customisation placeholder |
+| `HealthController.java` | `com.lease-demo.controller` | `GET /api/health` — delegates to `HealthService` |
+| `HealthResponse.java` | `com.lease-demo.dto` | Java record — `status`, `application`, `version` |
+| `GlobalExceptionHandler.java` | `com.lease-demo.exception` | `@RestControllerAdvice` — maps unhandled exceptions to RFC 9457 `ProblemDetail` |
+| `HealthService.java` | `com.lease-demo.service` | Constructs and returns `HealthResponse` from `ApplicationProperties` |
 
 ### Java — Empty Packages (placeholder `.gitkeep`)
 
 | Package | Purpose |
 |---------|---------|
-| `com.luxsoft.dxc.entity` | JPA entities — populated in a later milestone |
-| `com.luxsoft.dxc.mapper` | MapStruct mappers — populated in a later milestone |
-| `com.luxsoft.dxc.model` | Domain model classes — populated in a later milestone |
-| `com.luxsoft.dxc.repository` | Spring Data repositories — populated in a later milestone |
-| `com.luxsoft.dxc.util` | Utility classes — populated in a later milestone |
+| `com.lease-demo.entity` | JPA entities — populated in a later milestone |
+| `com.lease-demo.mapper` | MapStruct mappers — populated in a later milestone |
+| `com.lease-demo.model` | Domain model classes — populated in a later milestone |
+| `com.lease-demo.repository` | Spring Data repositories — populated in a later milestone |
+| `com.lease-demo.util` | Utility classes — populated in a later milestone |
 
 ### Java — Test Sources
 
 | File | Purpose |
 |------|---------|
-| `LuxsoftDxcDemoApplicationTests.java` | Spring Boot context load test — verifies all beans wire correctly |
+| `LeaseDemoApplicationTests.java` | Spring Boot context load test — verifies all beans wire correctly |
 
 ---
 
@@ -180,7 +180,7 @@ mvn clean package
 Output confirmed:
 
 - Compilation: success (0 errors, 0 warnings relevant to application code)
-- Context load: `Started LuxsoftDxcDemoApplicationTests in 1.968 seconds`
+- Context load: `Started LeaseDemoApplicationTests in 1.968 seconds`
 - Active profile: `local`
 - Actuator endpoints: 3 exposed (`health`, `info`, `metrics`)
 - Tests: 1 passed, 0 failed
@@ -205,7 +205,7 @@ Expected response:
 ```json
 {
   "status": "UP",
-  "application": "luxsoft-dxc-demo",
+  "application": "lease-demo",
   "version": "0.1.0"
 }
 ```
@@ -222,7 +222,7 @@ curl http://localhost:8080/actuator/health
 
 - [x] `pom.xml` created with Java 21, Spring Boot 3.3.4, all required dependencies
 - [x] `application.yml`, `application-local.yml`, `application-prod.yml` created
-- [x] `LuxsoftDxcDemoApplication` main class created
+- [x] `LeaseDemoApplication` main class created
 - [x] All 10 packages created (`config`, `controller`, `dto`, `entity`, `exception`, `mapper`, `model`, `repository`, `service`, `util`)
 - [x] `GET /api/health` endpoint implemented and returning correct JSON structure
 - [x] `GlobalExceptionHandler` in place using RFC 9457 `ProblemDetail`

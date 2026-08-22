@@ -111,7 +111,7 @@ If the NBP API is unavailable, the endpoint returns HTTP 502 with a `ProblemDeta
 ### Backend feature package
 
 ```
-com.luxsoft.dxc.exchange/
+com.lease-demo.exchange/
 ├── client/         # NbpClient — RestClient wrapper
 ├── config/         # NbpClientConfig — RestClient Spring Bean
 ├── controller/     # ExchangeRateController — GET /api/exchange-rates

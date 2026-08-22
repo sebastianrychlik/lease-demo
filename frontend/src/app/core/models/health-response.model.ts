@@ -6,7 +6,7 @@
  * Example response:
  * {
  *   "status": "UP",
- *   "application": "luxsoft-dxc-demo",
+ *   "application": "lease-demo",
  *   "version": "0.1.0"
  * }
  */

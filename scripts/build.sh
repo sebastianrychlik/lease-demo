@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/build.sh — luxsoft-dxc-demo
+# scripts/build.sh — lease-demo
 # Builds the backend and frontend artifacts.
 # =============================================================================
 

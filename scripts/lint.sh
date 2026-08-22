@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/lint.sh — luxsoft-dxc-demo
+# scripts/lint.sh — lease-demo
 # Runs linters for backend and frontend.
 # =============================================================================
 

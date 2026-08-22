@@ -47,7 +47,7 @@ the following reasons:
 ## Repository Structure
 
 ```
-luxsoft-dxc-demo/
+lease-demo/
 ├── .github/
 │   └── workflows/          # CI/CD pipeline definitions (empty — populated in a later milestone)
 ├── .vscode/

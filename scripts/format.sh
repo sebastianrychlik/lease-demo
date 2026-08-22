@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# scripts/format.sh — luxsoft-dxc-demo
+# scripts/format.sh — lease-demo
 # Runs code formatters for backend and frontend.
 # =============================================================================
 

@@ -19,13 +19,13 @@
     <!-- =========================================================== -->
     <!-- Project coordinates                                          -->
     <!-- =========================================================== -->
-    <groupId>com.luxsoft.dxc</groupId>
-    <artifactId>luxsoft-dxc-demo</artifactId>
+    <groupId>com.leasedemo</groupId>
+    <artifactId>lease-demo</artifactId>
     <version>0.1.0</version>
     <packaging>jar</packaging>
 
-    <name>luxsoft-dxc-demo</name>
-    <description>Enterprise Spring Boot demo — Luxoft DXC technical interview</description>
+    <name>lease-demo</name>
+    <description>Full Stack Java and Angular leasing demo application</description>
 
     <!-- =========================================================== -->
     <!-- Properties                                                   -->
