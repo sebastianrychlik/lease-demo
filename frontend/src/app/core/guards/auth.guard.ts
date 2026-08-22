@@ -1,20 +1,30 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn } from '@angular/router';
+
+import { AuthService } from '../services/auth.service';
 
 /**
- * Authentication guard — placeholder.
+ * Authentication guard.
  *
  * Responsibilities:
- * - Protects routes that require authentication.
- * - Will be wired to an AuthService in a future milestone.
+ * - Allows navigation when the user has an active Keycloak session.
+ * - For unauthenticated users, initiates the Keycloak Authorization Code + PKCE S256
+ *   flow instead of routing to a local username/password page.
+ * - Preserves the originally requested URL as the post-login redirect target so
+ *   the user returns to the intended page after successful authentication.
  *
  * Usage:
  *   { path: 'protected', canActivate: [authGuard], ... }
  */
-export const authGuard: CanActivateFn = (_route, _state) => {
-  const router = inject(Router);
+export const authGuard: CanActivateFn = (_route, state) => {
+  const authService = inject(AuthService);
 
-  // Placeholder: always allow access until AuthService is implemented.
-  // Replace with: return authService.isAuthenticated() ? true : router.createUrlTree(['/login']);
-  return true;
+  if (authService.isAuthenticated()) {
+    return true;
+  }
+
+  // Redirect to Keycloak with the originally requested path as redirectUri
+  // so the user lands on the correct page after a successful login.
+  authService.login(`${window.location.origin}${state.url}`);
+  return false;
 };
