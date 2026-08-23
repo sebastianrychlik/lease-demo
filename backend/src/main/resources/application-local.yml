@@ -34,6 +34,22 @@ application:
   cors:
     # Angular dev server origin — the only allowed cross-origin caller locally.
     allowed-origins: http://localhost:4200
+  crypto:
+    # Application-level field encryption keys (PESEL). No fallback/default
+    # value is committed here — every environment, including local
+    # development, must supply its own Base64-encoded 256-bit keys via the
+    # CRYPTO_AES_KEY / CRYPTO_HMAC_KEY environment variables. The application
+    # fails fast at startup (see AesGcmEncryptionService/HmacLookupHashService)
+    # if these are missing, malformed, or too short.
+    #
+    # Generate local development keys with, e.g.:
+    #   openssl rand -base64 32
+    # and export them in your shell before starting the backend:
+    #   export CRYPTO_AES_KEY=...
+    #   export CRYPTO_HMAC_KEY=...
+    # Never commit real key material to source control.
+    aes-key: ${CRYPTO_AES_KEY}
+    hmac-key: ${CRYPTO_HMAC_KEY}
 
 logging:
   level:

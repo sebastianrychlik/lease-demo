@@ -20,6 +20,18 @@ fi
 echo
 echo "[2/3] Starting Spring Boot..."
 
+# Application-level field encryption keys (PESEL) are required at startup
+# and are never committed to source control (see application-local.yml).
+# For local development convenience only, generate ephemeral session keys
+# here if they are not already present in the environment. Keys are never
+# printed. Production keys are provisioned out-of-band via a secret store.
+if [ -z "${CRYPTO_AES_KEY:-}" ]; then
+    export CRYPTO_AES_KEY="$(openssl rand -base64 32)"
+fi
+if [ -z "${CRYPTO_HMAC_KEY:-}" ]; then
+    export CRYPTO_HMAC_KEY="$(openssl rand -base64 32)"
+fi
+
 (
     cd "$ROOT_DIR/backend"
     mvn spring-boot:run

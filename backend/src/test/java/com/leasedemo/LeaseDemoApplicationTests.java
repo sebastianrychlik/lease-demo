@@ -1,5 +1,6 @@
 package com.leasedemo;
 
+import com.leasedemo.repository.CustomerRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -54,6 +55,16 @@ class LeaseDemoApplicationTests {
      */
     @MockBean
     JwtDecoder jwtDecoder;
+
+    /**
+     * The "local" test profile excludes JPA/DataSource/Flyway auto-configuration
+     * (see {@code src/test/resources/application-local.yml}), so the real
+     * {@link CustomerRepository} Spring Data JPA proxy cannot be created here.
+     * {@code CustomerService} depends on it, so it is mocked purely to satisfy
+     * that dependency during this configuration smoke test.
+     */
+    @MockBean
+    CustomerRepository customerRepository;
 
     @Test
     void contextLoads() {

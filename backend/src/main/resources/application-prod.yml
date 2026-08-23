@@ -35,6 +35,13 @@ application:
     # Comma-separated list of origins (no trailing slash).
     # Example: https://app.example.com,https://www.app.example.com
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  crypto:
+    # Application-level field encryption keys (PESEL) — Base64-encoded
+    # 256-bit keys, injected via environment variables/secret store.
+    # Never committed to source control. Rotating these keys requires
+    # re-encrypting/re-hashing existing pesel_encrypted/pesel_lookup data.
+    aes-key: ${CRYPTO_AES_KEY}
+    hmac-key: ${CRYPTO_HMAC_KEY}
 
 logging:
   level:

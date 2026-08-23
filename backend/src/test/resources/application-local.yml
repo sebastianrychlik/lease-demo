@@ -25,6 +25,11 @@ spring:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
       - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+      # M4.1 introduced the first Spring Data JPA repository (CustomerRepository).
+      # Without a real DataSource/EntityManagerFactory in this lightweight
+      # full-context test profile, Spring Data JPA cannot create repository
+      # proxies, so its auto-configuration must also be excluded here.
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
   security:
     oauth2:
       resourceserver:
@@ -34,3 +39,10 @@ spring:
 application:
   cors:
     allowed-origins: http://localhost:4200
+  crypto:
+    # Fixed test-only keys (never used outside the test suite) — required
+    # because AesGcmEncryptionService/HmacLookupHashService eagerly decode
+    # these at bean-creation time, and this override otherwise strips out
+    # the "local" profile's real (dev-only) key defaults.
+    aes-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    hmac-key: ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=

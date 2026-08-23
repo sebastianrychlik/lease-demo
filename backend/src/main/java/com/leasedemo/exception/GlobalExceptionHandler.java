@@ -25,6 +25,29 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problemDetail;
     }
 
+    /**
+     * Handles PESEL validation failures (bad format, checksum, or a
+     * DOB/gender mismatch against the declared values).
+     */
+    @ExceptionHandler(InvalidPeselException.class)
+    public ProblemDetail handleInvalidPeselException(InvalidPeselException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid PESEL");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles attempts to register a customer whose PESEL is already on file.
+     */
+    @ExceptionHandler(DuplicateCustomerException.class)
+    public ProblemDetail handleDuplicateCustomerException(DuplicateCustomerException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problemDetail.setTitle("Duplicate Customer");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
