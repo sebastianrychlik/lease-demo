@@ -1,6 +1,23 @@
 spring:
   application:
     name: lease-demo
+  datasource:
+    # Local PostgreSQL 17 running in Docker (container: lease-demo-postgres).
+    # These are LOCAL DEVELOPMENT credentials for the disposable Docker
+    # environment only — never used in production.
+    url: jdbc:postgresql://localhost:5433/lease_demo
+    username: leasedemo
+    password: leasedemo
+  jpa:
+    hibernate:
+      # Flyway owns schema evolution. Hibernate must never create/alter the
+      # schema — it only validates that entity mappings match what Flyway
+      # has already migrated.
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   security:
     oauth2:
       resourceserver:

@@ -1,6 +1,22 @@
 spring:
   application:
     name: lease-demo
+  datasource:
+    # Production datasource — fully environment-driven. No hardcoded
+    # credentials. The same JDBC-based configuration works against any
+    # managed PostgreSQL instance without code changes.
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Flyway owns schema evolution in every environment, including
+      # production. Hibernate never creates/alters the schema.
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   security:
     oauth2:
       resourceserver:

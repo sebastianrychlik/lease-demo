@@ -74,6 +74,34 @@
             <version>${mapstruct.version}</version>
         </dependency>
 
+        <!-- Spring Data JPA (Hibernate ORM over the application datasource) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Flyway — owns database schema evolution -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
+        <!-- Flyway PostgreSQL-specific support module.
+             Flyway 10.x (managed by Spring Boot 3.3.x) moved built-in database
+             support out of flyway-core into per-database modules; PostgreSQL
+             requires this module to be present on the classpath. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
         <!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
