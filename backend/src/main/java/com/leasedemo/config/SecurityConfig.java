@@ -37,6 +37,8 @@ import java.util.List;
  *
  * <p><strong>Endpoint policy:</strong>
  * <pre>
+ *   /swagger-ui/**      →  public   (OpenAPI/Swagger UI documentation, M4.1.1)
+ *   /v3/api-docs/**     →  public   (OpenAPI JSON, M4.1.1)
  *   /actuator/health    →  public   (deployment infrastructure health checks)
  *   /actuator/info      →  public
  *   /actuator/**        →  ROLE_ADMIN  (metrics and management require admin access)
@@ -100,6 +102,15 @@ public class SecurityConfig {
 
                         // Preflight CORS requests must always pass through.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Swagger UI / OpenAPI documentation: public.
+                        // NOTE (M4.1.1): API documentation exposure is a demo/interview
+                        // convenience. In a real financial production deployment, whether
+                        // to expose interactive API docs publicly is an explicit
+                        // deployment/security decision (often restricted to internal
+                        // networks or disabled entirely). This does NOT make /api/**
+                        // public — protected endpoints remain governed by the rules below.
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                         // Actuator health/info: public — required by deployment infra.
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()

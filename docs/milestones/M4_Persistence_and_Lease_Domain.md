@@ -10,8 +10,9 @@ document. Sections are explicitly marked as **IMPLEMENTED** or
 **PLANNED / FUTURE ARCHITECTURE** — never assume a "PLANNED" section
 already exists in code.
 
-Current implemented scope: **M4.0 and M4.1** (persistence foundation
-plus the initial `Customer` domain).
+Current implemented scope: **M4.0, M4.1, and M4.1.1** (persistence
+foundation, the initial `Customer` domain, and OpenAPI/Swagger UI
+documentation).
 
 Future planned scope: M4.2 (LeaseApplication) and beyond.
 
@@ -1248,6 +1249,131 @@ Security comes from **multiple independent layers**, so that a failure
 or gap in one layer (e.g. a misconfigured TLS termination, or a leaked
 log line) does not automatically mean full compromise of PESEL data —
 the remaining layers still apply.
+
+---
+
+## M4.1.1 — OpenAPI / Swagger UI — IMPLEMENTED
+
+### 1. Objective
+
+Add interactive REST API documentation to the backend using
+**springdoc-openapi**, without changing Customer business behavior or
+weakening `/api/**` security. Purely developer/interview tooling.
+
+### 2. What Was Added
+
+- Dependency: `org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0`
+  (springdoc-openapi 2.x targets Spring Boot 3 / Jakarta EE 9+; 2.6.0
+  is compatible with the project's Spring Boot 3.3.4 / Spring
+  Framework 6.1.x without upgrading Boot or Java).
+- `config/OpenApiConfig.java` — registers OpenAPI metadata (title
+  `LeaseDemo API`, description, version `0.1.0`) and an HTTP Bearer
+  security scheme named `bearerAuth` (`type: http`, `scheme: bearer`,
+  `bearerFormat: JWT`).
+- `SecurityConfig` — whitelisted `/swagger-ui/**` and
+  `/v3/api-docs/**` as `permitAll()`, placed before the actuator/API
+  rules and before the final `anyRequest().denyAll()`. No other rule
+  changed; `/api/**` remains `authenticated()`.
+- `CustomerController` — annotated with `@SecurityRequirement(name =
+  "bearerAuth")` (so only real, existing operations are documented as
+  protected) plus a concise `@Operation`/`@ApiResponses` for
+  `POST /api/customers` (201 / 400 / 401 / 409).
+- `CustomerCreateRequest.pesel` — annotated with `@Schema(description =
+  ...)` explaining that PESEL is accepted only in the request body and
+  never persisted in plaintext. No example PESEL value was added.
+
+### 3. URLs
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+### 4. Public Documentation vs. Protected API
+
+Making the documentation endpoints public does **not** make the
+LeaseDemo API public:
+
+```
+/swagger-ui/**   -> permitAll   (documentation UI)
+/v3/api-docs/**  -> permitAll   (OpenAPI JSON)
+/api/health      -> permitAll   (unchanged)
+/api/**          -> authenticated   (unchanged — includes /api/customers)
+```
+
+`GET /api/health` still returns 200 without a JWT; `POST
+/api/customers` still returns 401 without a JWT. Verified locally
+against the running backend (Postgres + Keycloak containers already
+up), and via `SecurityIntegrationTest` (`@WebMvcTest` + real
+`SecurityConfig`, mocked `JwtDecoder`).
+
+### 5. Bearer JWT Authorize Support
+
+Swagger UI displays an **Authorize** button backed by the `bearerAuth`
+HTTP bearer scheme. A developer pastes a raw Keycloak access token
+(no `Bearer ` prefix needed) and Swagger sends
+`Authorization: Bearer <token>` on subsequent "Try it out" calls —
+standard OpenAPI HTTP-bearer behavior. This is a manual
+developer/testing convenience; Angular remains the only component
+performing the real Keycloak Authorization Code + PKCE browser login.
+No OAuth2 flow is configured inside Swagger.
+
+### 6. Verified (local)
+
+- `GET /swagger-ui/index.html` → 200, loads without authentication.
+- `GET /v3/api-docs` → 200, valid OpenAPI JSON containing
+  `info.title = "LeaseDemo API"` and
+  `components.securitySchemes.bearerAuth` (`type: http`, `scheme:
+  bearer`, `bearerFormat: JWT`).
+- `paths./api/customers.post.security` = `[{ "bearerAuth": [] }]`.
+- `POST /api/customers` without a JWT → 401.
+- `GET /api/health` without a JWT → 200.
+- `components.schemas.CustomerResponse` /
+  `CustomerCreateRequest` contain no `peselEncrypted`,
+  `peselLookup`, or crypto key fields.
+- `mvn clean verify`: **43/43 tests pass**, `BUILD SUCCESS`.
+
+### 7. Production Note
+
+For this demo milestone, Swagger UI and the OpenAPI document are
+publicly readable. In a real financial production environment,
+whether to expose interactive API documentation at all — versus
+restricting it to internal networks, requiring auth, or disabling it
+— is an explicit deployment/security decision made per environment.
+No profile-specific toggle was added here to keep this milestone
+focused on demo/interview usability.
+
+### 8. Interview Notes — M4.1.1
+
+1. **What is OpenAPI?** A language-agnostic specification (JSON/YAML)
+   describing a REST API's paths, request/response schemas, and
+   security requirements.
+2. **What is Swagger UI?** An interactive web UI that renders an
+   OpenAPI document, letting a developer browse and execute API calls
+   from the browser.
+3. **Is Swagger the same as OpenAPI?** No — OpenAPI is the
+   specification/format; "Swagger" (now Swagger UI/Swagger tools) is
+   tooling built around that specification. springdoc-openapi
+   generates the OpenAPI document and serves Swagger UI.
+4. **Why can Swagger UI be public while the API remains protected?**
+   Documentation describes the API's shape; it grants no access by
+   itself. `SecurityConfig` still enforces `authenticated()` on
+   `/api/**` independently of whether its description is public.
+5. **How does Swagger send a JWT?** Via the configured `bearerAuth`
+   HTTP bearer scheme — pasting a token into "Authorize" makes Swagger
+   attach `Authorization: Bearer <token>` to subsequent requests.
+6. **Does Swagger authenticate the user with Keycloak here?** No —
+   Swagger only lets a developer manually paste an already-obtained
+   access token. The real Authorization Code + PKCE login flow is
+   performed by Angular, not Swagger.
+7. **Why might Swagger be disabled/restricted in production?** Public
+   API documentation can reveal internal endpoint shapes/fields to
+   attackers, aiding reconnaissance; some organizations restrict it to
+   internal networks or disable it in production entirely.
+8. **Difference between API documentation security and API endpoint
+   security?** Documentation security controls who can *read the
+   description* of the API (e.g. Swagger UI access); endpoint security
+   controls who can *actually call* the API (Spring Security's
+   authentication/authorization rules) — the two are independent, and
+   this milestone deliberately keeps the latter unchanged.
 
 ---
 

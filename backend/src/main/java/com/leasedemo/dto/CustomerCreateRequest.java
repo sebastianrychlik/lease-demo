@@ -1,6 +1,7 @@
 package com.leasedemo.dto;
 
 import com.leasedemo.entity.Gender;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,6 +30,9 @@ public record CustomerCreateRequest(
         String phoneNumber,
         @NotNull @Past LocalDate dateOfBirth,
         @NotNull Gender gender,
-        @NotBlank @Pattern(regexp = "\\d{11}", message = "PESEL must be exactly 11 digits") String pesel
+        @NotBlank @Pattern(regexp = "\\d{11}", message = "PESEL must be exactly 11 digits")
+        @Schema(description = "Polish PESEL national identification number. "
+                + "Accepted only in the request body; never persisted in plaintext.")
+        String pesel
 ) {
 }

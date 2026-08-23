@@ -176,4 +176,29 @@ class SecurityIntegrationTest {
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isForbidden());
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // E. Swagger UI / OpenAPI documentation — public (M4.1.1)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("E — GET /swagger-ui/index.html without JWT → not blocked by Spring Security")
+    void swaggerUi_noJwt_notBlockedBySecurity() throws Exception {
+        // springdoc resources are not registered in this @WebMvcTest web-layer slice
+        // (no controllers for HealthController/ExchangeRateController), so the result
+        // is 404 (no handler) rather than 200. The key assertion is that Spring
+        // Security does NOT reject the request with 401/403 — /swagger-ui/** is
+        // explicitly whitelisted before anyRequest().denyAll().
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("E — GET /v3/api-docs without JWT → not blocked by Spring Security")
+    void apiDocs_noJwt_notBlockedBySecurity() throws Exception {
+        // Same rationale as above: /v3/api-docs/** is permitAll in SecurityConfig,
+        // so the request reaches (the absent) MVC handler in this slice → 404, not 401/403.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isNotFound());
+    }
 }
