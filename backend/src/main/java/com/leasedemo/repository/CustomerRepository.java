@@ -15,4 +15,13 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     Optional<Customer> findByPeselLookup(String peselLookup);
 
     boolean existsByPeselLookup(String peselLookup);
+
+    /**
+     * Friendly, early duplicate check for an already-registered Keycloak
+     * identity. This is NOT the authoritative safeguard — the
+     * {@code customers.keycloak_user_id} database {@code UNIQUE} constraint
+     * remains the concurrency-safe guarantee against duplicate identities
+     * under concurrent requests.
+     */
+    boolean existsByKeycloakUserId(String keycloakUserId);
 }

@@ -59,9 +59,11 @@ class CustomerServiceTest {
                 peselValidator, encryptionService, lookupHashService, customerRepository, customerMapper);
     }
 
+    private static final String KEYCLOAK_USER_ID = "keycloak-sub-123";
+
     private CustomerCreateRequest request() {
         return new CustomerCreateRequest(
-                "keycloak-sub-123", "Jan", "Kowalski", "jan.kowalski@example.com", "+48123456789",
+                "Jan", "Kowalski", "jan.kowalski@example.com", "+48123456789",
                 LocalDate.of(1944, 5, 14), Gender.MALE, PESEL);
     }
 
@@ -70,23 +72,24 @@ class CustomerServiceTest {
     void createCustomer_validRequest_persistsEncryptedCustomer() {
         CustomerCreateRequest request = request();
 
+        when(customerRepository.existsByKeycloakUserId(KEYCLOAK_USER_ID)).thenReturn(false);
         when(lookupHashService.hash(PESEL)).thenReturn("lookup-hash");
         when(customerRepository.existsByPeselLookup("lookup-hash")).thenReturn(false);
         when(encryptionService.encrypt(PESEL)).thenReturn("cipher-text");
 
         Customer saved = new Customer(
-                request.keycloakUserId(), request.firstName(), request.lastName(), request.email(),
+                KEYCLOAK_USER_ID, request.firstName(), request.lastName(), request.email(),
                 request.phoneNumber(), request.dateOfBirth(), request.gender(),
                 "cipher-text", "lookup-hash");
         when(customerRepository.save(any(Customer.class))).thenReturn(saved);
 
         CustomerResponse expectedResponse = new CustomerResponse(
-                UUID.randomUUID(), request.keycloakUserId(), request.firstName(), request.lastName(),
+                UUID.randomUUID(), KEYCLOAK_USER_ID, request.firstName(), request.lastName(),
                 request.email(), request.phoneNumber(), request.dateOfBirth(), request.gender(),
                 saved.getCreatedAt(), saved.getUpdatedAt());
         when(customerMapper.toResponse(saved)).thenReturn(expectedResponse);
 
-        CustomerResponse response = customerService.createCustomer(request);
+        CustomerResponse response = customerService.createCustomer(KEYCLOAK_USER_ID, request);
 
         verify(peselValidator).validate(PESEL, request.dateOfBirth(), request.gender());
 
@@ -95,6 +98,7 @@ class CustomerServiceTest {
         Customer persisted = customerCaptor.getValue();
         assertThat(persisted.getPeselEncrypted()).isEqualTo("cipher-text");
         assertThat(persisted.getPeselLookup()).isEqualTo("lookup-hash");
+        assertThat(persisted.getKeycloakUserId()).isEqualTo(KEYCLOAK_USER_ID);
 
         assertThat(response).isEqualTo(expectedResponse);
     }
@@ -103,10 +107,11 @@ class CustomerServiceTest {
     @DisplayName("rejects a PESEL that fails validation before touching the repository")
     void createCustomer_invalidPesel_propagatesAndSkipsPersistence() {
         CustomerCreateRequest request = request();
+        when(customerRepository.existsByKeycloakUserId(KEYCLOAK_USER_ID)).thenReturn(false);
         org.mockito.Mockito.doThrow(new InvalidPeselException("bad pesel"))
                 .when(peselValidator).validate(anyString(), any(), any());
 
-        assertThatThrownBy(() -> customerService.createCustomer(request))
+        assertThatThrownBy(() -> customerService.createCustomer(KEYCLOAK_USER_ID, request))
                 .isInstanceOf(InvalidPeselException.class);
 
         verify(customerRepository, never()).save(any());
@@ -116,13 +121,62 @@ class CustomerServiceTest {
     @DisplayName("rejects a duplicate PESEL without encrypting or persisting")
     void createCustomer_duplicatePesel_throwsAndSkipsPersistence() {
         CustomerCreateRequest request = request();
+        when(customerRepository.existsByKeycloakUserId(KEYCLOAK_USER_ID)).thenReturn(false);
         when(lookupHashService.hash(PESEL)).thenReturn("lookup-hash");
         when(customerRepository.existsByPeselLookup("lookup-hash")).thenReturn(true);
 
-        assertThatThrownBy(() -> customerService.createCustomer(request))
+        assertThatThrownBy(() -> customerService.createCustomer(KEYCLOAK_USER_ID, request))
                 .isInstanceOf(DuplicateCustomerException.class);
 
         verify(encryptionService, never()).encrypt(anyString());
         verify(customerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("rejects a duplicate authenticated Keycloak identity before PESEL validation")
+    void createCustomer_duplicateKeycloakIdentity_throwsAndSkipsPeselValidation() {
+        CustomerCreateRequest request = request();
+        when(customerRepository.existsByKeycloakUserId(KEYCLOAK_USER_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> customerService.createCustomer(KEYCLOAK_USER_ID, request))
+                .isInstanceOf(DuplicateCustomerException.class);
+
+        verify(peselValidator, never()).validate(anyString(), any(), any());
+        verify(customerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("fails safely when the authenticated subject is blank")
+    void createCustomer_blankKeycloakUserId_throwsIllegalStateException() {
+        CustomerCreateRequest request = request();
+
+        assertThatThrownBy(() -> customerService.createCustomer("  ", request))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(customerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("security boundary: persisted keycloakUserId comes from the trusted "
+            + "authenticated subject, never from request data")
+    void createCustomer_bindsIdentityFromAuthenticatedSubjectNotRequestBody() {
+        String trustedSubject = "trusted-user-123";
+        CustomerCreateRequest request = request();
+
+        when(customerRepository.existsByKeycloakUserId(trustedSubject)).thenReturn(false);
+        when(lookupHashService.hash(PESEL)).thenReturn("lookup-hash");
+        when(customerRepository.existsByPeselLookup("lookup-hash")).thenReturn(false);
+        when(encryptionService.encrypt(PESEL)).thenReturn("cipher-text");
+        when(customerRepository.save(any(Customer.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(customerMapper.toResponse(any(Customer.class))).thenReturn(
+                new CustomerResponse(UUID.randomUUID(), trustedSubject, request.firstName(), request.lastName(),
+                        request.email(), request.phoneNumber(), request.dateOfBirth(), request.gender(),
+                        null, null));
+
+        customerService.createCustomer(trustedSubject, request);
+
+        ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
+        verify(customerRepository).save(customerCaptor.capture());
+        assertThat(customerCaptor.getValue().getKeycloakUserId()).isEqualTo(trustedSubject);
     }
 }

@@ -18,12 +18,13 @@ import java.time.LocalDate;
  * {@code PeselValidator}; it is never persisted in plaintext, logged, or
  * echoed back in any response/exception message.
  *
- * <p>{@code keycloakUserId} corresponds to the Keycloak JWT {@code sub}
- * claim. Automatic extraction from the authenticated JWT is not implemented
- * yet, so it must currently be supplied explicitly by the caller.
+ * <p>This is untrusted client-supplied business data. It deliberately does
+ * NOT contain the Keycloak identity ({@code keycloakUserId} / JWT
+ * {@code sub}) — that value is derived exclusively from the authenticated
+ * JWT by {@code CustomerController} and passed to {@code CustomerService}
+ * out of band, so a client can never choose or override its own identity.
  */
 public record CustomerCreateRequest(
-        @NotBlank String keycloakUserId,
         @NotBlank String firstName,
         @NotBlank String lastName,
         @NotBlank @Email String email,

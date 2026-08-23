@@ -21,8 +21,9 @@ import java.util.UUID;
  * <p>{@link #keycloakUserId} is the Keycloak JWT {@code sub} claim
  * identifying the owning Keycloak account. No password or role information
  * is stored here — Keycloak remains the sole source of truth for
- * authentication/authorization. Automatic extraction of this value from the
- * incoming JWT is not implemented yet; it is currently supplied explicitly.
+ * authentication/authorization. This value is derived exclusively from the
+ * validated, authenticated JWT (see {@code CustomerController}) — it is
+ * never accepted as client-supplied request data.
  *
  * <p>The raw PESEL value is never persisted. Instead:
  *

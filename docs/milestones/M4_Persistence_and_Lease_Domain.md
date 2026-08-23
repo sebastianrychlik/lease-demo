@@ -547,13 +547,56 @@ customers.keycloak_user_id
   `KeycloakRealmRoleConverter`), not from a `Customer` column.
 - `email` is business contact data, not an identity key (see §2).
 
-**FUTURE / NOT YET IMPLEMENTED:** automatic extraction of the JWT
-`sub` claim into `keycloak_user_id` during customer creation. Today,
-`keycloakUserId` is a plain, explicitly-supplied field on
-`CustomerCreateRequest` — the backend does not yet read it from the
-authenticated principal. Wiring this up (e.g. via
-`@AuthenticationPrincipal Jwt` in `CustomerController`) is planned but
-not built.
+**IMPLEMENTED (M4.1.2):** automatic extraction of the JWT `sub` claim
+into `keycloak_user_id` during customer creation:
+
+```
+validated JWT
+   |
+   v
+sub
+   |
+   v
+Customer.keycloakUserId
+   |
+   v
+customers.keycloak_user_id
+```
+
+`CustomerController#createCustomer` obtains the authenticated JWT via
+`@AuthenticationPrincipal Jwt jwt` (Spring Security has already
+validated the token's signature/issuer/expiry before the controller
+runs) and reads `jwt.getSubject()`. This value is passed to
+`CustomerService.createCustomer(String keycloakUserId,
+CustomerCreateRequest request)` as a separate, trusted parameter — it
+is never read from the request body.
+
+**Trust boundary:**
+
+| Source | Trust level | Carried by |
+|---|---|---|
+| JWT `sub` claim | **Trusted** — authenticated by Spring Security/Keycloak | `CustomerController` → `CustomerService(keycloakUserId, ...)` |
+| `CustomerCreateRequest` (name, DOB, gender, PESEL, email, phone) | **Untrusted** — client-supplied business data | validated by Bean Validation + `PeselValidator` |
+
+`CustomerCreateRequest` deliberately has **no `keycloakUserId` field**
+— a client cannot choose, override, or spoof another user's identity
+by putting a different value in the request body, because there is no
+such field to put it in.
+
+If (unexpectedly) the authenticated JWT lacks a usable subject,
+`CustomerService` fails fast with `IllegalStateException` rather than
+persisting a `Customer` with a null/blank `keycloak_user_id` — this
+should never happen for a request that already passed JWT
+authentication, so no bespoke exception/status is introduced for it.
+
+**Duplicate identity handling:** `CustomerService` checks
+`CustomerRepository.existsByKeycloakUserId(...)` early and throws
+`DuplicateCustomerException` (mapped to **409 Conflict**) as a
+friendly, fast failure. The `customers.keycloak_user_id` **UNIQUE**
+database constraint remains in place and is the authoritative,
+concurrency-safe guarantee — the service-level check alone cannot
+prevent a race between two concurrent requests for the same subject;
+only the database constraint can.
 
 ### 4. PII and Data Classification
 
@@ -1665,6 +1708,33 @@ focused on demo/interview usability.
     PostgreSQL-compatibility mode can diverge on edge cases. **Not
     currently implemented in LeaseDemo** — this is a planned future
     testing improvement (see §9, §24).
+85. **Why should `keycloakUserId` not come from the request body
+    (M4.1.2)?** A request body is client-controlled input; if the
+    client could supply its own `keycloakUserId`, it could impersonate
+    or overwrite another authenticated user's identity. The identity
+    must instead come exclusively from the already-validated JWT.
+86. **Why use JWT `sub` instead of an email claim for the identity
+    binding?** `sub` is assigned once by Keycloak and never changes;
+    email is mutable business/contact data (see §62–63) and is
+    deliberately kept out of the identity-binding decision in this
+    milestone (no scope expansion to cross-check/derive email from the
+    JWT).
+87. **Does the backend trust JWT claims blindly?** No — Spring
+    Security's OAuth2 resource server support validates the token's
+    signature (against Keycloak's published JWK set), issuer, and
+    expiry *before* the request ever reaches `CustomerController`. Only
+    after that validation does the controller read `jwt.getSubject()`.
+88. **Who validates the JWT before the controller sees it?** Spring
+    Security's `oauth2ResourceServer(...).jwt(...)` filter chain
+    (configured in `SecurityConfig`), using the `JwtDecoder`
+    auto-configured from `spring.security.oauth2.resourceserver.jwt.issuer-uri`.
+89. **Why retain `UNIQUE(keycloak_user_id)` if the service already
+    checks `existsByKeycloakUserId` first?** Same rationale as
+    `pesel_lookup` (see §70–71): the service-level check is a friendly,
+    early failure for the common case, but it is vulnerable to a
+    check-then-insert race between two concurrent requests for the same
+    subject. Only the database `UNIQUE` constraint is atomic and
+    therefore authoritative.
 
 ---
 
@@ -1688,7 +1758,8 @@ focused on demo/interview usability.
 | No committed crypto keys | **IMPLEMENTED** |
 | Crypto key fail-fast validation | **IMPLEMENTED** |
 | `Customer` create REST (`POST /api/customers`) | **IMPLEMENTED** (ahead of original M4.1 scope; not expanded further) |
-| JWT `sub` automatic extraction into `keycloak_user_id` | **NOT IMPLEMENTED** (explicit request field today) |
+| JWT `sub` automatic extraction into `keycloak_user_id` | **IMPLEMENTED (M4.1.2)** — via `@AuthenticationPrincipal Jwt` in `CustomerController`; no client-supplied identity field exists |
+| Duplicate Keycloak identity rejection (409) | **IMPLEMENTED (M4.1.2)** — `existsByKeycloakUserId` early check + `keycloak_user_id` UNIQUE constraint |
 | Testcontainers-based repository tests | **NOT IMPLEMENTED** |
 | Managed PostgreSQL (production) | **FUTURE** |
 | Production KMS/Secret Manager | **FUTURE** |
