@@ -843,28 +843,83 @@ application:
     hmac-key: ${CRYPTO_HMAC_KEY}
 ```
 
-For local convenience, `scripts/deploy-local.sh` generates ephemeral
-session-only keys with `openssl rand -base64 32` if
-`CRYPTO_AES_KEY`/`CRYPTO_HMAC_KEY` are not already set in the shell
-environment, and never prints them.
+#### M4.1.3 CORRECTION — persistent local crypto keys
 
-**Explicit caveat:** if new random keys are generated while the
-persistent local PostgreSQL volume (`lease-demo-postgres-data`) still
-contains `Customer` rows created under previous keys:
+Earlier iterations of `scripts/deploy-local.sh` generated **ephemeral,
+session-only** keys with `openssl rand -base64 32` whenever
+`CRYPTO_AES_KEY`/`CRYPTO_HMAC_KEY` were not already present in the
+shell environment. This was flagged above as acceptable only for
+disposable data — and once the local PostgreSQL database became
+**persistent** (surviving backend restarts, populated via
+`scripts/postgres-seed-local-data.sh`), it turned into an active bug:
 
-- existing `pesel_encrypted` values cannot be decrypted with the new
-  AES key,
-- the same PESEL now produces a **different** `pesel_lookup` under the
-  new HMAC key, so duplicate-detection/lookup behavior becomes
-  inconsistent across sessions.
+- restarting the backend generated new random keys;
+- existing `pesel_encrypted` values could no longer be decrypted with
+  the new AES key;
+- the same PESEL now produced a **different** `pesel_lookup` under the
+  new HMAC key, breaking deterministic duplicate-detection and
+  `UNIQUE(pesel_lookup)` correctness across restarts;
+- the seeder script ran as a **separate OS process**, so it could
+  never see keys `export`-ed only inside `deploy-local.sh`'s shell —
+  making the inconsistency immediately visible.
 
-Ephemeral generated keys are therefore acceptable **only** for
-disposable local data/testing. Once persistent seeded local `Customer`
-data is introduced, local development keys should become **stable
-across restarts** while still staying outside Git — e.g. via a
-developer-local, git-ignored environment/secret file, or another local
-secret mechanism. This is a local-development-only consideration, not
-a change to the production model in §12.
+**Fix:** a small, gitignored, root-level file, **`.env.local`**, now
+holds persistent LOCAL-ONLY key material:
+
+```
+CRYPTO_AES_KEY=<Base64 32-byte key>
+CRYPTO_HMAC_KEY=<Base64 32-byte key>
+```
+
+A shared shell helper, `scripts/lib/local-crypto-keys.sh`
+(`load_local_crypto_keys`), is `source`d by both
+`scripts/deploy-local.sh` and `scripts/postgres-seed-local-data.sh`
+before Spring Boot starts. It:
+
+- **first run:** if `.env.local` does not exist, generates one AES key
+  and one independent HMAC key with `openssl rand -base64 32` each,
+  writes them to `.env.local`, and prints only a safe informational
+  message (`Created persistent local crypto keys in .env.local`) —
+  never the key values;
+- **subsequent runs:** if `.env.local` already exists, loads the
+  existing values **without regenerating them**, so the same keys are
+  reused by every local process (backend and seeder alike) across
+  restarts;
+- **validates** after loading that both variables are present,
+  non-blank, valid Base64, that the decoded AES key is exactly 32
+  bytes, and the decoded HMAC key is at least 32 bytes — mirroring the
+  same fail-fast checks `AesGcmEncryptionService`/
+  `HmacLookupHashService` perform in Java (§10);
+- **fails fast** (non-zero exit, clear error message, no
+  regeneration) if `.env.local` exists but is missing an entry or
+  contains invalid Base64/wrong-length key material. Silently
+  regenerating in that situation could make existing encrypted
+  database rows permanently unreadable, so the helper deliberately
+  refuses and asks the developer to fix or recover the file instead.
+
+`.env.local` is listed in `.gitignore` (verified with
+`git check-ignore .env.local`) and is never printed, logged, or
+committed. An optional `.env.local.example` documents the expected
+shape using **placeholders only** — never real generated key values.
+
+`application-local.yml` is unchanged by this correction — it still
+references `${CRYPTO_AES_KEY}`/`${CRYPTO_HMAC_KEY}` with no hardcoded
+defaults; only the *source* of those environment variables when
+running locally has changed, from "regenerated every run" to
+"generated once, persisted in `.env.local`, reused thereafter."
+
+IMPLEMENTED by this correction:
+- persistent local development crypto keys shared by
+  `deploy-local.sh` and `postgres-seed-local-data.sh`.
+
+FUTURE / NOT covered by this correction:
+- production Secret Manager/KMS integration (see §12 — unchanged and
+  still not implemented);
+- formal cryptographic key rotation / re-encryption tooling;
+- production backup/recovery procedures for key material.
+
+This remains a **local-development-only** mechanism and has no effect
+on the production configuration/model described in §12.
 
 ### 12. Production Key Management — FUTURE / NOT IMPLEMENTED
 
@@ -1918,8 +1973,11 @@ a PESEL value; only non-sensitive counts and file paths are logged.
 ./scripts/postgres-seed-local-data.sh 100    # custom count
 ```
 
-Verifies `python`/`mvn` are on `PATH` and `CRYPTO_AES_KEY`/`CRYPTO_HMAC_KEY`
-are set, generates the mock JSON into `tmp/`, invokes
+Verifies `python`/`mvn` are on `PATH`, loads persistent
+`CRYPTO_AES_KEY`/`CRYPTO_HMAC_KEY` via the shared
+`scripts/lib/local-crypto-keys.sh` helper (see the M4.1.3 correction in
+§11 above — no manual export required, and the same keys used by
+`deploy-local.sh` are reused), generates the mock JSON into `tmp/`, invokes
 `mvn -Plocal-seed spring-boot:run` (the explicit local-seed Maven profile
 — see §5a) with `application.seed.customers.enabled=true` and
 `application.seed.customers.file=<path>` under the `local` Spring profile,

@@ -49,15 +49,12 @@ echo
 echo "[2/3] Starting Spring Boot..."
 
 # Application-level field encryption keys (PESEL) are required at startup.
-# Local development keys are generated for this process only when they have
-# not already been provided in the environment. Keys are never printed.
-if [ -z "${CRYPTO_AES_KEY:-}" ]; then
-    export CRYPTO_AES_KEY="$(openssl rand -base64 32)"
-fi
-
-if [ -z "${CRYPTO_HMAC_KEY:-}" ]; then
-    export CRYPTO_HMAC_KEY="$(openssl rand -base64 32)"
-fi
+# The local PostgreSQL database is persistent, so these keys must also be
+# persistent across backend restarts (see scripts/lib/local-crypto-keys.sh
+# and .env.local — never committed, never printed).
+# shellcheck source=lib/local-crypto-keys.sh
+source "$ROOT_DIR/scripts/lib/local-crypto-keys.sh"
+load_local_crypto_keys "$ROOT_DIR"
 
 (
     cd "$ROOT_DIR/backend"

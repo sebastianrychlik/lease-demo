@@ -54,11 +54,11 @@ command -v mvn >/dev/null 2>&1 || {
   exit 1
 }
 
-if [ -z "${CRYPTO_AES_KEY:-}" ] || [ -z "${CRYPTO_HMAC_KEY:-}" ]; then
-  echo "ERROR: CRYPTO_AES_KEY and CRYPTO_HMAC_KEY must be set in the environment" >&2
-  echo "       (same local development keys used to run the backend)." >&2
-  exit 1
-fi
+# Load the same persistent local crypto keys used by deploy-local.sh.
+# This works from a fresh shell — no manual export required.
+# shellcheck source=lib/local-crypto-keys.sh
+source "$ROOT_DIR/scripts/lib/local-crypto-keys.sh"
+load_local_crypto_keys "$ROOT_DIR"
 
 mkdir -p "$TMP_DIR"
 
