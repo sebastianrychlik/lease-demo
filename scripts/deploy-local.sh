@@ -4,9 +4,37 @@ set -e
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# ---------------------------------------------------------------------------
+# Arguments
+# ---------------------------------------------------------------------------
+
+MAVEN_PROFILE_ARGS=()
+
+case "${1:-}" in
+    "")
+        ;;
+    --local-seed)
+        MAVEN_PROFILE_ARGS+=("-Plocal-seed")
+        ;;
+    *)
+        echo "Unknown option: $1"
+        echo
+        echo "Usage:"
+        echo "  ./scripts/deploy-local.sh"
+        echo "  ./scripts/deploy-local.sh --local-seed"
+        exit 1
+        ;;
+esac
+
 echo "========================================"
 echo " LeaseDemo — Local Environment"
 echo "========================================"
+
+if [ "${1:-}" = "--local-seed" ]; then
+    echo "Mode: LOCAL + seed tooling"
+else
+    echo "Mode: LOCAL"
+fi
 
 echo
 echo "[1/3] Starting Keycloak..."
@@ -20,21 +48,21 @@ fi
 echo
 echo "[2/3] Starting Spring Boot..."
 
-# Application-level field encryption keys (PESEL) are required at startup
-# and are never committed to source control (see application-local.yml).
-# For local development convenience only, generate ephemeral session keys
-# here if they are not already present in the environment. Keys are never
-# printed. Production keys are provisioned out-of-band via a secret store.
+# Application-level field encryption keys (PESEL) are required at startup.
+# Local development keys are generated for this process only when they have
+# not already been provided in the environment. Keys are never printed.
 if [ -z "${CRYPTO_AES_KEY:-}" ]; then
     export CRYPTO_AES_KEY="$(openssl rand -base64 32)"
 fi
+
 if [ -z "${CRYPTO_HMAC_KEY:-}" ]; then
     export CRYPTO_HMAC_KEY="$(openssl rand -base64 32)"
 fi
 
 (
     cd "$ROOT_DIR/backend"
-    mvn spring-boot:run
+
+    mvn "${MAVEN_PROFILE_ARGS[@]}" spring-boot:run
 ) &
 
 BACKEND_PID=$!
@@ -56,7 +84,18 @@ echo "========================================"
 echo
 echo "Angular:     http://localhost:4200"
 echo "Backend:     http://localhost:8080"
+echo "Swagger:     http://localhost:8080/swagger-ui/index.html"
 echo "Keycloak:    http://localhost:8081"
+
+if [ "${1:-}" = "--local-seed" ]; then
+    echo
+    echo "Local seed tooling: INCLUDED"
+    echo "Maven profile:       local-seed"
+else
+    echo
+    echo "Local seed tooling: NOT INCLUDED"
+fi
+
 echo
 echo "Press Ctrl+C to stop Angular and backend."
 

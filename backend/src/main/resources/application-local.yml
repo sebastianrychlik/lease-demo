@@ -50,6 +50,14 @@ application:
     # Never commit real key material to source control.
     aes-key: ${CRYPTO_AES_KEY}
     hmac-key: ${CRYPTO_HMAC_KEY}
+  seed:
+    customers:
+      # LOCAL-DEVELOPMENT-ONLY mock Customer seeder (M4.1.3, see
+      # CustomerSeedRunner). Disabled by default — normal local startup
+      # must never unexpectedly insert mock data. Enable explicitly, e.g.:
+      #   SEED_CUSTOMERS_ENABLED=true SEED_CUSTOMERS_FILE=/path/to/mock-customers.json ./mvnw spring-boot:run
+      enabled: ${SEED_CUSTOMERS_ENABLED:false}
+      file: ${SEED_CUSTOMERS_FILE:}
 
 logging:
   level:

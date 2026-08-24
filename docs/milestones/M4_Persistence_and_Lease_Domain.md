@@ -10,9 +10,10 @@ document. Sections are explicitly marked as **IMPLEMENTED** or
 **PLANNED / FUTURE ARCHITECTURE** — never assume a "PLANNED" section
 already exists in code.
 
-Current implemented scope: **M4.0, M4.1, and M4.1.1** (persistence
-foundation, the initial `Customer` domain, and OpenAPI/Swagger UI
-documentation).
+Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, and M4.1.3**
+(persistence foundation, the initial `Customer` domain, OpenAPI/Swagger UI
+documentation, JWT-bound customer identity, and a local-only mock
+Customer data seeder).
 
 Future planned scope: M4.2 (LeaseApplication) and beyond.
 
@@ -1738,6 +1739,265 @@ focused on demo/interview usability.
 
 ---
 
+## M4.1.3 — Local Mock Customer Seeder — IMPLEMENTED
+
+### 1. Objective
+
+M4.1.3 adds a **LOCAL-DEVELOPMENT-ONLY** mechanism to populate the local
+PostgreSQL database with realistic, synthetic `Customer` records for
+development/demo purposes — without weakening any part of the production
+trust boundary established in M4.1/M4.1.2.
+
+```
+scripts/postgres-seed-local-data.sh (mvn -Plocal-seed ...)
+        |
+        v
+scripts/generate-customer-mock-data.py   (synthetic business data + valid PESEL)
+        |
+        | JSON (tmp/mock-customers.json — gitignored, disposable)
+        v
+CustomerSeedRunner (compiled only under -Plocal-seed; local profile + explicit flag)
+        |
+        v
+CustomerService.createCustomer(mock-user-NNNNNN, request)
+        |
+        +--> PeselValidator
+        +--> AesGcmEncryptionService
+        +--> HmacLookupHashService
+        |
+        v
+CustomerRepository -> PostgreSQL
+```
+
+> **Security correction (post-implementation):** the initial version of
+> this milestone placed `CustomerSeedRunner`/`CustomerSeedProperties`/
+> `CustomerSeedRecord` under the normal `src/main/java` source set,
+> protected only by `@Profile("local")` +
+> `application.seed.customers.enabled=true`. An audit of the packaged
+> artifact (`jar tf target/lease-demo-0.1.0.jar | grep -i seed`) confirmed
+> that all three `.class` files were present in the **normal production
+> JAR** even though they could never be *activated* under a production
+> Spring profile. Runtime-only guards are a real safeguard, but they are
+> not the strongest available one for sensitive development tooling, so
+> §5 below adds **build-time/artifact-level isolation** as an additional,
+> stronger layer. See §5a.
+
+### 2. Python Generator (`scripts/generate-customer-mock-data.py`)
+
+- Standard-library only (`argparse`, `json`, `random`, `unittest`,
+  `dataclasses`, `datetime`) — no third-party dependencies.
+- Generates a JSON array of Customer seed records:
+  `keycloakUserId`, `firstName`, `lastName`, `email`, `phoneNumber`,
+  `dateOfBirth`, `gender`, `pesel`.
+- `--count N` (default 50), `--output PATH`, `--seed N` (reproducibility),
+  `--self-test` (runs the built-in `unittest` suite).
+- Small built-in Polish first-name/surname lists; emails use the reserved
+  `example.test` domain — **no real personal data**.
+
+### 3. PESEL Generation — Derived, Never Independent
+
+Every PESEL is generated **from** `dateOfBirth` and `gender`, never the
+reverse, mirroring `PeselValidator` exactly:
+
+- Century/month encoding: 1800s +80, 1900s +0, 2000s +20, 2100s +40,
+  2200s +60 added to the calendar month.
+- Digits 7–9: 3-digit ordinal serial, derived from a per-record index and
+  probed forward on collision to guarantee batch uniqueness.
+- Digit 10 (gender): odd = MALE, even = FEMALE — nudged to the correct
+  parity from the serial source.
+- Digit 11 (checksum): weights `1,3,7,9,1,3,7,9,1,3` over digits 1–10,
+  `(10 - (sum % 10)) % 10`.
+- **Self-validation (`self_validate_batch`)** re-derives DOB/gender from
+  every generated PESEL and re-checks the checksum before the batch is
+  ever written to disk — a generator bug fails fast and loudly, it is
+  never silently handed to Spring. `PeselValidator` remains the
+  authoritative application-level validator regardless.
+- Covered by 11 standard-library `unittest` cases: male/female parity,
+  checksum, DOB round-trip, all five century offsets, and batch
+  uniqueness (PESEL/`keycloakUserId`/email) — run via
+  `python scripts/generate-customer-mock-data.py --self-test`.
+
+### 4. Uniqueness
+
+Within a generated batch: PESEL (probed on collision), `keycloakUserId`
+(`mock-user-000001`, `mock-user-000002`, …), and email are all guaranteed
+unique by construction, not random chance.
+
+### 5a. Build-Time / Artifact Isolation (Layer 1 — strongest)
+
+`CustomerSeedRunner`, `CustomerSeedProperties`, and `CustomerSeedRecord`
+live under a dedicated source root, **not** `src/main/java`/`src/test/java`:
+
+```
+backend/src/local-seed/java/com/leasedemo/config/CustomerSeedRunner.java
+backend/src/local-seed/java/com/leasedemo/config/CustomerSeedProperties.java
+backend/src/local-seed/java/com/leasedemo/dto/CustomerSeedRecord.java
+backend/src/local-seed/test/java/com/leasedemo/config/CustomerSeedRunnerTest.java
+```
+
+`backend/pom.xml` defines a `local-seed` Maven profile that uses
+`build-helper-maven-plugin` to add `src/local-seed/java`/`src/local-seed/test`
+as extra source roots — **only when that profile is explicitly
+activated** (`mvn -Plocal-seed ...`). Normal builds
+(`mvn clean package`, `mvn clean verify`, and CI) never activate this
+profile, so `javac` never even sees these files: the resulting
+`.class` files are **not compiled, not packaged, and not present** in
+the ordinary Spring Boot fat JAR — regardless of
+`SPRING_PROFILES_ACTIVE`, environment variables, or Spring properties
+supplied at runtime, because there is no code there to activate.
+
+This is a categorically stronger guarantee than a Spring profile: a
+profile is a *runtime* switch evaluated by an already-running JVM that
+already contains the class on its classpath; this mechanism removes the
+class from the classpath entirely for any binary built the normal way.
+
+### 5. Spring Runtime Seeding Guards (Layers 2-4, defense in depth)
+
+- `CustomerSeedRunner` (`ApplicationRunner`) is annotated
+  `@Profile("local")` **and** `@ConditionalOnProperty(name =
+  "application.seed.customers.enabled", havingValue = "true")` — both
+  conditions are required; neither alone is sufficient. There is no
+  `local` profile (and thus no seeding capability at all) in any deployed
+  environment.
+- `application.seed.customers.enabled` defaults to `false`
+  (`application-local.yml`) — a normal local startup never unexpectedly
+  inserts mock data.
+- No HTTP endpoint is exposed for seeding — this is deliberately a
+  non-HTTP, CLI-invoked mechanism (`spring-boot:run` with seed
+  properties), not a REST backdoor.
+- Reads `application.seed.customers.file`, a path to the JSON produced by
+  the Python generator, and deserializes it with the standard Jackson
+  `ObjectMapper` already on the classpath.
+
+### 6. `CustomerService` Reuse / Trust Boundary
+
+`CustomerSeedRunner` calls the exact same
+`CustomerService.createCustomer(String keycloakUserId,
+CustomerCreateRequest request)` used by `CustomerController` — the seed
+record's `keycloakUserId` is passed as a separate, out-of-band trusted
+argument, precisely mirroring how the controller passes the verified JWT
+`sub`. `CustomerSeedRecord.toCreateRequest()` deliberately excludes
+`keycloakUserId` from the resulting `CustomerCreateRequest` — it is
+**not**, and must never be, a field on that record; a production HTTP
+client still cannot supply it. Every generated record passes through the
+real `PeselValidator` → `AesGcmEncryptionService` →
+`HmacLookupHashService` → `CustomerRepository` pipeline; no raw SQL
+`INSERT` is used, and no field is written directly.
+
+No fake JWTs are minted, `SecurityConfig` is untouched, and no Keycloak
+users/Admin API calls are involved — `mock-user-NNNNNN` values are purely
+local, synthetic identities understood only by the seeder and
+`CustomerService`, never authenticated against Keycloak.
+
+### 7. Idempotency / Rerun Behavior
+
+Before calling `CustomerService`, the runner checks
+`customerRepository.existsByKeycloakUserId(...)` and skips already-seeded
+identities. `DuplicateCustomerException` (e.g. a PESEL collision against
+existing data) is also caught per-record and counted as skipped, so one
+already-present record never aborts the batch. A generator-side
+`InvalidPeselException` is caught, counted as failed, and logged without
+the PESEL value. A final summary is logged:
+`Requested: N, Created: C, Skipped: S, Failed: F`. Re-running the seeder
+with the same generated identities is safe and non-destructive; it never
+overwrites existing rows.
+
+### 8. Plaintext PESEL Handling
+
+The generated JSON contains synthetic plaintext PESEL values only
+transiently, in `tmp/mock-customers.json` — gitignored (`.gitignore` now
+excludes `tmp/`, `scripts/tmp/`, `*.mock-customers.json`) and removed by
+`scripts/postgres-seed-local-data.sh` on exit via a `trap`. Neither the
+Python script's console output nor `CustomerSeedRunner` ever prints/logs
+a PESEL value; only non-sensitive counts and file paths are logged.
+
+### 9. `scripts/postgres-seed-local-data.sh`
+
+```
+./scripts/postgres-seed-local-data.sh        # 50 customers
+./scripts/postgres-seed-local-data.sh 100    # custom count
+```
+
+Verifies `python`/`mvn` are on `PATH` and `CRYPTO_AES_KEY`/`CRYPTO_HMAC_KEY`
+are set, generates the mock JSON into `tmp/`, invokes
+`mvn -Plocal-seed spring-boot:run` (the explicit local-seed Maven profile
+— see §5a) with `application.seed.customers.enabled=true` and
+`application.seed.customers.file=<path>` under the `local` Spring profile,
+prints the Created/Skipped/Failed summary from the application log, and
+cleans up the temporary JSON on exit. Does not print PESEL values or
+crypto keys. Does not reset/drop the database — that remains
+`postgres-reset.sh`'s separate responsibility.
+
+### 10. No Flyway / Schema Impact
+
+No migration was added or modified. Flyway defines schema; mock data is
+runtime-inserted application data, never a migration concern.
+
+### 11. Real Local Validation (executed)
+
+Ran against the local `lease-demo-postgres` container, after the §5a
+build-time isolation change:
+
+- Normal artifact audit: `mvn clean package` (no profile) →
+  `jar tf target/lease-demo-0.1.0.jar | grep -i seed` → **zero matches**.
+  `CustomerSeedRunner.class`, `CustomerSeedProperties.class`, and
+  `CustomerSeedRecord.class` are absent.
+- Local-seed artifact check: `mvn -Plocal-seed clean package` →
+  the same `grep` **does** list all three classes under
+  `BOOT-INF/classes/...` — confirming the profile correctly gates
+  compilation/packaging in both directions.
+- Runtime confirmation: the *normal* JAR was started directly
+  (`java -jar lease-demo-0.1.0.jar --spring.profiles.active=local
+  --application.seed.customers.enabled=true ...`) — it started
+  successfully with no seeding-related log line at all (no bean of that
+  type exists to be conditionally created), proving the profile/flag
+  combination is powerless against the normal artifact.
+- `./scripts/postgres-seed-local-data.sh 5` (uses `-Plocal-seed`
+  internally): `Requested: 5, Created: 5, Skipped: 0, Failed: 0`;
+  `SELECT COUNT(*) FROM customers;` → `5`; every row has non-null
+  `pesel_encrypted`/`pesel_lookup`, no plaintext `pesel` column.
+- Re-running the same command: `Requested: 5, Created: 0, Skipped: 5,
+  Failed: 0`; row count remained `5` — idempotent, non-destructive rerun
+  behavior is unaffected by the source-set relocation.
+
+### 12. Interview Notes (M4.1.3)
+
+90. **Why not seed through the normal authenticated REST endpoint?**
+    That would require minting real (or fake) JWTs / provisioning dozens
+    of throwaway Keycloak users purely for local demo data — extra
+    infrastructure and a route to accidentally weakening
+    authentication tooling. Calling `CustomerService` directly, in
+    process, under an explicit local-only guard, reuses all business
+    validation without touching the authentication boundary at all.
+91. **Why not duplicate the AES/HMAC logic in Python?** Duplicated crypto
+    implementations drift and are a classic source of subtle security
+    bugs; the single source of truth for encryption/hashing must remain
+    `AesGcmEncryptionService`/`HmacLookupHashService`. Python's only job
+    is to produce plausible, structurally-valid business input.
+92. **Why should seed data never be a Flyway migration?** Flyway
+    migrations are permanent, versioned, and applied to every environment
+    that runs them (including, potentially, non-local ones by mistake).
+    Demo data is disposable, environment-specific, and must never become
+    part of the permanent schema history.
+93. **Why must the local seeder be both profile- and flag-guarded?**
+    Defense in depth: a stray `local` profile activation, or a stray
+    property flip alone, should still not be sufficient to trigger mock
+    data insertion. Requiring both makes accidental activation
+    significantly less likely, and neither condition can be true in a
+    deployed environment (no `local` profile is ever configured there).
+94. **Why not rely only on a Spring `local` profile for dangerous
+    development tooling?** Because a profile is a *runtime* activation
+    control — the code is still compiled and shipped inside the artifact;
+    a misconfigured deployment could theoretically set
+    `SPRING_PROFILES_ACTIVE=local` and the matching property. For
+    sensitive development tooling like `CustomerSeedRunner`, build-time
+    separation (`src/local-seed` + an explicit `local-seed` Maven profile,
+    §5a) provides stronger defense in depth by ensuring the code is
+    physically absent from the normal production artifact — there is
+    nothing for a stray runtime flag to activate.
+
+---
+
 ## Implemented vs Future Matrix
 
 | Capability | Status |
@@ -1760,6 +2020,7 @@ focused on demo/interview usability.
 | `Customer` create REST (`POST /api/customers`) | **IMPLEMENTED** (ahead of original M4.1 scope; not expanded further) |
 | JWT `sub` automatic extraction into `keycloak_user_id` | **IMPLEMENTED (M4.1.2)** — via `@AuthenticationPrincipal Jwt` in `CustomerController`; no client-supplied identity field exists |
 | Duplicate Keycloak identity rejection (409) | **IMPLEMENTED (M4.1.2)** — `existsByKeycloakUserId` early check + `keycloak_user_id` UNIQUE constraint |
+| Local-only mock Customer seeder (M4.1.3) | **IMPLEMENTED** — build-time isolated under `src/local-seed` (`-Plocal-seed` required to compile/package) + `local` profile + `application.seed.customers.enabled=true`, reuses `CustomerService`, absent from normal production JAR |
 | Testcontainers-based repository tests | **NOT IMPLEMENTED** |
 | Managed PostgreSQL (production) | **FUTURE** |
 | Production KMS/Secret Manager | **FUTURE** |
