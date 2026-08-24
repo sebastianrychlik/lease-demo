@@ -38,4 +38,11 @@ describe('UxDemoPageComponent', () => {
     const inputs = fixture.nativeElement.querySelectorAll('app-input input');
     expect(inputs.length).toBeGreaterThan(0);
   });
+
+  it('composes the real app-data-table with static fictional rows', () => {
+    const table = fixture.nativeElement.querySelector('app-data-table table');
+    expect(table).toBeTruthy();
+    const rows = fixture.nativeElement.querySelectorAll('app-data-table tbody tr');
+    expect(rows.length).toBe(3);
+  });
 });

@@ -1,0 +1,47 @@
+<div class="customer-list-page">
+  <app-page-header title="Customers" subtitle="Browse registered LeaseDemo customers"></app-page-header>
+
+  <app-card>
+    <div class="customer-list-page__toolbar">
+      <app-input
+        label="Search"
+        placeholder="Search by name or email"
+        [formControl]="searchControl"
+      ></app-input>
+    </div>
+
+    @switch (viewState().status) {
+      @case ('error') {
+        <div class="customer-list-page__state" role="alert">
+          <p>Something went wrong loading customers.</p>
+          <button type="button" class="customer-list-page__retry" (click)="retry()">Retry</button>
+        </div>
+      }
+      @case ('empty-no-customers') {
+        <p class="customer-list-page__state">No customers yet.</p>
+      }
+      @case ('empty-no-matches') {
+        <p class="customer-list-page__state">No customers match your search.</p>
+      }
+      @default {
+        <app-data-table
+          [columns]="columns"
+          [rows]="rows()"
+          [loading]="isLoading()"
+          [activeSortField]="sortField()"
+          [activeSortDirection]="sortDirection()"
+          (sortChange)="onSortChange($event)"
+        ></app-data-table>
+
+        <mat-paginator
+          [length]="totalElements()"
+          [pageIndex]="page()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          (page)="onPageChange($event)"
+          aria-label="Select customers page"
+        ></mat-paginator>
+      }
+    }
+  </app-card>
+</div>

@@ -2,11 +2,20 @@ package com.leasedemo.repository;
 
 import com.leasedemo.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public interface CustomerRepository extends JpaRepository<Customer, UUID> {
+/**
+ * {@link JpaSpecificationExecutor} is additionally implemented so the
+ * Admin Customer list query (M4.4) can compose an optional, case-insensitive
+ * free-text search predicate with server-side pagination/sorting — entirely
+ * translated into a single SQL query executed by PostgreSQL, without
+ * introducing QueryDSL or another persistence dependency.
+ */
+public interface CustomerRepository extends JpaRepository<Customer, UUID>,
+        JpaSpecificationExecutor<Customer> {
 
     /**
      * Looks up a customer by the deterministic HMAC-SHA-256 hash of their

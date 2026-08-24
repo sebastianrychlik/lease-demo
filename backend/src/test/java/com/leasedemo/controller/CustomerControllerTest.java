@@ -2,9 +2,12 @@ package com.leasedemo.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leasedemo.config.SecurityConfig;
+import com.leasedemo.dto.CustomerListItemResponse;
 import com.leasedemo.dto.CustomerResponse;
+import com.leasedemo.dto.PageResponse;
 import com.leasedemo.entity.Gender;
 import com.leasedemo.exception.DuplicateCustomerException;
+import com.leasedemo.exception.InvalidSortFieldException;
 import com.leasedemo.service.CustomerService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,15 +21,20 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -115,5 +123,60 @@ class CustomerControllerTest {
                         .contentType("application/json")
                         .content(requestBodyJson()))
                 .andExpect(status().isConflict());
+    }
+
+    private CustomerListItemResponse sampleListItem() {
+        return new CustomerListItemResponse(
+                UUID.randomUUID(), "Jan", "Kowalski", "jan.kowalski@example.com",
+                "+48123456789", LocalDate.of(1944, 5, 14), Gender.MALE, Instant.now());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers — no JWT -> 401 Unauthorized")
+    void getCustomers_noJwt_returns401() throws Exception {
+        mockMvc.perform(get("/api/customers"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers — CUSTOMER role -> 403 Forbidden")
+    void getCustomers_customerRole_returns403() throws Exception {
+        mockMvc.perform(get("/api/customers")
+                        .with(jwt().jwt(builder -> builder.subject("customer-1"))
+                                .authorities(() -> "ROLE_CUSTOMER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers — ADMIN role -> 200 OK with paged content")
+    void getCustomers_adminRole_returns200() throws Exception {
+        PageResponse<CustomerListItemResponse> page =
+                new PageResponse<>(List.of(sampleListItem()), 0, 20, 1, 1, true, true);
+        when(customerService.getCustomers(anyInt(), anyInt(), isNull(), isNull(), isNull()))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/api/customers")
+                        .with(jwt().jwt(builder -> builder.subject("admin-1"))
+                                .authorities(() -> "ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].email").value("jan.kowalski@example.com"))
+                .andExpect(jsonPath("$.content[0].peselEncrypted").doesNotExist())
+                .andExpect(jsonPath("$.content[0].peselLookup").doesNotExist())
+                .andExpect(jsonPath("$.content[0].keycloakUserId").doesNotExist())
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /api/customers — unsupported sort field -> 400 Bad Request")
+    void getCustomers_unsupportedSortField_returns400() throws Exception {
+        when(customerService.getCustomers(anyInt(), anyInt(), any(), eq("nope"), any()))
+                .thenThrow(new InvalidSortFieldException("Unsupported sort field: 'nope'"));
+
+        mockMvc.perform(get("/api/customers")
+                        .param("sortField", "nope")
+                        .with(jwt().jwt(builder -> builder.subject("admin-1"))
+                                .authorities(() -> "ROLE_ADMIN")))
+                .andExpect(status().isBadRequest());
     }
 }

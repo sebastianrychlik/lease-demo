@@ -43,6 +43,7 @@ import java.util.List;
  *   /actuator/info      →  public
  *   /actuator/**        →  ROLE_ADMIN  (metrics and management require admin access)
  *   /api/health         →  public   (application health check)
+ *   GET /api/customers  →  ROLE_ADMIN  (Admin Customer list query, M4.4)
  *   /api/**             →  authenticated  (any valid LeaseDemo JWT)
  *   everything else     →  deny
  * </pre>
@@ -121,6 +122,12 @@ public class SecurityConfig {
 
                         // Application health endpoint: public — no auth required.
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+
+                        // Admin Customer list query (M4.4): ADMIN-only. Declared before the
+                        // general /api/** authenticated rule below so it takes precedence.
+                        // This is the authoritative security boundary — Angular's admin
+                        // route guard is UX/navigation only, not a trust boundary.
+                        .requestMatchers(HttpMethod.GET, "/api/customers").hasRole("ADMIN")
 
                         // All application API endpoints require a valid authenticated JWT.
                         .requestMatchers("/api/**").authenticated()

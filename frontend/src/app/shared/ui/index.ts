@@ -16,3 +16,10 @@ export { CardComponent } from './card/card.component';
 export { PageHeaderComponent } from './page-header/page-header.component';
 
 export { InputComponent } from './input/input.component';
+
+export { DataTableComponent } from './data-table/data-table.component';
+export type {
+  DataTableColumn,
+  DataTableSortDirection,
+  DataTableSortEvent,
+} from './data-table/data-table.model';

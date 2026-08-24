@@ -48,6 +48,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problemDetail;
     }
 
+    /**
+     * Handles an Admin Customer list request for a sort field outside the
+     * server-owned allow-list (M4.4).
+     */
+    @ExceptionHandler(InvalidSortFieldException.class)
+    public ProblemDetail handleInvalidSortFieldException(InvalidSortFieldException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid Sort Field");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);

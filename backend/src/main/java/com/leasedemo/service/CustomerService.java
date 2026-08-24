@@ -1,17 +1,27 @@
 package com.leasedemo.service;
 
 import com.leasedemo.dto.CustomerCreateRequest;
+import com.leasedemo.dto.CustomerListItemResponse;
 import com.leasedemo.dto.CustomerResponse;
+import com.leasedemo.dto.PageResponse;
 import com.leasedemo.entity.Customer;
 import com.leasedemo.exception.DuplicateCustomerException;
+import com.leasedemo.exception.InvalidSortFieldException;
 import com.leasedemo.mapper.CustomerMapper;
 import com.leasedemo.repository.CustomerRepository;
+import com.leasedemo.repository.CustomerSpecifications;
 import com.leasedemo.security.crypto.AesGcmEncryptionService;
 import com.leasedemo.security.crypto.HmacLookupHashService;
 import com.leasedemo.util.PeselValidator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.Set;
 
 /**
  * Orchestrates customer registration:
@@ -35,6 +45,22 @@ import org.springframework.util.StringUtils;
  */
 @Service
 public class CustomerService {
+
+    /**
+     * Explicit allow-list of client-supplied sort fields for the Admin
+     * Customer list query (M4.4). The API owns its supported sort contract
+     * instead of passing arbitrary client property names into persistence
+     * sorting.
+     */
+    private static final Set<String> SUPPORTED_SORT_FIELDS =
+            Set.of("firstName", "lastName", "email", "dateOfBirth", "createdAt");
+
+    /** Deterministic default sort: last name, then first name, ascending. */
+    private static final Sort DEFAULT_SORT = Sort.by(
+            Sort.Order.asc("lastName"), Sort.Order.asc("firstName"));
+
+    /** Hard ceiling on requested page size — prevents unbounded row retrieval. */
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final PeselValidator peselValidator;
     private final AesGcmEncryptionService encryptionService;
@@ -100,5 +126,52 @@ public class CustomerService {
 
         Customer saved = customerRepository.save(customer);
         return customerMapper.toResponse(saved);
+    }
+
+    /**
+     * Server-side paged/sorted/searched Admin Customer list query (M4.4).
+     *
+     * <p>Pagination, sorting, and free-text filtering are all pushed down
+     * into a single PostgreSQL query via {@link CustomerRepository}'s
+     * {@code JpaSpecificationExecutor} — no in-memory filtering/sorting or
+     * loading of unrelated rows occurs.
+     *
+     * @param page       zero-based page index; negative values are clamped to 0
+     * @param size       requested page size; clamped to {@code [1, MAX_PAGE_SIZE]}
+     * @param search     optional free-text search over first name / last name / email;
+     *                   null/blank behaves as an unfiltered query
+     * @param sortField  optional client-requested sort field; must be present in
+     *                   {@link #SUPPORTED_SORT_FIELDS} or {@link InvalidSortFieldException} is thrown
+     * @param sortDirection optional client-requested sort direction ("asc"/"desc", case-insensitive);
+     *                      defaults to ascending
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<CustomerListItemResponse> getCustomers(
+            int page, int size, String search, String sortField, String sortDirection) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+
+        Sort sort = resolveSort(sortField, sortDirection);
+        Pageable pageable = PageRequest.of(safePage, safeSize, sort);
+
+        Page<Customer> result = customerRepository.findAll(
+                CustomerSpecifications.searchByNameOrEmail(search), pageable);
+
+        return PageResponse.from(result, customerMapper::toListItemResponse);
+    }
+
+    private Sort resolveSort(String sortField, String sortDirection) {
+        if (!StringUtils.hasText(sortField)) {
+            return DEFAULT_SORT;
+        }
+        if (!SUPPORTED_SORT_FIELDS.contains(sortField)) {
+            throw new InvalidSortFieldException(
+                    "Unsupported sort field: '" + sortField + "'. Supported fields: "
+                            + SUPPORTED_SORT_FIELDS);
+        }
+        Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection)
+                ? Sort.Direction.DESC
+                : Sort.Direction.ASC;
+        return Sort.by(direction, sortField);
     }
 }

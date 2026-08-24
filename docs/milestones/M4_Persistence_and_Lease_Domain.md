@@ -10,13 +10,15 @@ document. Sections are explicitly marked as **IMPLEMENTED** or
 **PLANNED / FUTURE ARCHITECTURE** — never assume a "PLANNED" section
 already exists in code.
 
-Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, M4.1.3, M4.2, and
-M4.3** (persistence foundation, the initial `Customer` domain, OpenAPI/
+Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, M4.1.3, M4.2, M4.3,
+and M4.4** (persistence foundation, the initial `Customer` domain, OpenAPI/
 Swagger UI documentation, JWT-bound customer identity, a local-only mock
-Customer data seeder, the frontend design-system foundation, and the
-role-aware Angular Admin/Customer application shell).
+Customer data seeder, the frontend design-system foundation, the
+role-aware Angular Admin/Customer application shell, and the first real
+ADMIN business feature — server-side paged/sorted/searched Customer
+management).
 
-Future planned scope: the `LeaseApplication` domain, beyond M4.3.
+Future planned scope: the `LeaseApplication` domain, beyond M4.4.
 
 ---
 
@@ -2716,5 +2718,362 @@ sharing one product design system and reusable shell primitives.
 **Q: Why does ADMIN win when both roles exist?**
 A: It provides deterministic default navigation for the demo without
 introducing unnecessary role-switching complexity.
+
+---
+
+## M4.4 — Admin Customer Management: Server-Side Query + Pagination + Search — IMPLEMENTED
+
+### 1. Objective
+
+M4.4 implements the first real ADMIN business feature on top of M4.3's
+role-aware shell: `Admin → Customers`, a server-side paged, sorted, and
+searchable Customer list backed by the existing PostgreSQL `customers`
+table.
+
+```
+Admin Customers Page → HTTP → GET /api/customers (ROLE_ADMIN)
+    → CustomerController → CustomerService → JpaSpecificationExecutor
+    → CustomerRepository → PostgreSQL → Page<Customer> → CustomerListItemResponse
+    → PageResponse<T> → Angular CustomerService → app-data-table + mat-paginator
+```
+
+### 2. GET /api/customers Contract
+
+```
+GET /api/customers?page=0&size=20&search=kowalski&sortField=lastName&sortDirection=asc
+```
+
+| Param          | Default    | Notes                                              |
+|----------------|------------|-----------------------------------------------------|
+| `page`         | `0`        | zero-based; negative values clamp to 0              |
+| `size`         | `20`       | clamped to `[1, 100]` — no unbounded row retrieval  |
+| `search`       | none       | free-text over firstName/lastName/email             |
+| `sortField`    | none       | allow-listed; default sort applies when omitted     |
+| `sortDirection`| `asc`      | `asc` or `desc`                                     |
+
+Response body is the application-owned `PageResponse<CustomerListItemResponse>`
+(see § 5/6 below) — not Spring Data's own `Page` JSON shape.
+
+### 3. Authorization — Spring Security, Not the Controller
+
+`SecurityConfig` declares an explicit rule ahead of the general `/api/**`
+authenticated rule:
+
+```java
+.requestMatchers(HttpMethod.GET, "/api/customers").hasRole("ADMIN")
+```
+
+Behavior:
+- **no JWT** → 401 Unauthorized (rejected before reaching the controller)
+- **ROLE_CUSTOMER** → 403 Forbidden
+- **ROLE_ADMIN** → 200 OK
+
+`CustomerController` performs no manual role/claim inspection — Spring
+Security's declarative `hasRole("ADMIN")` is the authoritative boundary,
+consistent with the existing `/actuator/**` ADMIN rule. This is a direct
+continuation of M4.3's stated principle: Angular's `adminAreaGuard` on
+`/admin/customers` is UX/navigation only; Spring Security is the real trust
+boundary for the underlying data.
+
+### 4. Pagination
+
+Standard Spring Data `Pageable`/`PageRequest`, built in `CustomerService`
+from validated/clamped `page`/`size` values (default `page=0`, `size=20`,
+max `size=100`). Pagination is executed by PostgreSQL via the generated
+`LIMIT`/`OFFSET` SQL — Angular never receives more than one page of rows.
+
+introducing unnecessary role-switching complexity.
+
+### 5. `PageResponse<T>` — Application-Owned Envelope
+
+```java
+public record PageResponse<T>(
+        List<T> content, int page, int size,
+        long totalElements, int totalPages, boolean first, boolean last) {
+    public static <S, T> PageResponse<T> from(Page<S> page, Function<S, T> mapper) { ... }
+}
+```
+
+Built from Spring Data's `Page<Customer>` via `PageResponse.from(page, mapper)`.
+Deliberately small and decoupled from Spring Data's own `Page` JSON
+serialization, so the external API contract does not shift if Spring Data's
+internal `Page` shape changes across versions.
+
+### 6. `CustomerListItemResponse` — List DTO
+
+```java
+public record CustomerListItemResponse(
+        UUID id, String firstName, String lastName, String email,
+        String phoneNumber, LocalDate dateOfBirth, Gender gender, Instant createdAt) {
+}
+```
+
+Mapped from `Customer` via a new `CustomerMapper.toListItemResponse(...)`
+MapStruct method (same mapper used for `CustomerResponse`).
+
+**Explicitly excluded** (never returned by this endpoint):
+- `peselEncrypted`
+- `peselLookup`
+- plaintext PESEL (never persisted anywhere, per M4.1.2/M4.1.3)
+- `keycloakUserId` — no concrete Admin UI requirement exists for it in this
+  milestone
+
+Verified by `CustomerControllerTest` assertions (`jsonPath(...).doesNotExist()`)
+on the ADMIN-role success response.
+
+### 7. Search
+
+`CustomerSpecifications.searchByNameOrEmail(searchTerm)` builds a
+`Specification<Customer>` matching `firstName`/`lastName`/`email`
+case-insensitively (`cb.like(cb.lower(...), "%term%")`). A null/blank
+search term returns a specification matching everything (`cb.conjunction()`),
+so the same query path serves both filtered and unfiltered requests. PESEL
+(raw, encrypted, or lookup hash) is never part of this search — decrypting
+every row to search plaintext PESEL was explicitly out of scope.
+
+### 8. Sorting — Explicit Allow-List
+
+```java
+private static final Set<String> SUPPORTED_SORT_FIELDS =
+        Set.of("firstName", "lastName", "email", "dateOfBirth", "createdAt");
+private static final Sort DEFAULT_SORT =
+        Sort.by(Sort.Order.asc("lastName"), Sort.Order.asc("firstName"));
+```
+
+An unsupported `sortField` throws `InvalidSortFieldException`, translated by
+`GlobalExceptionHandler` into `400 Bad Request` (`ProblemDetail`) — consistent
+with the existing `InvalidPeselException` handling style. The API owns its
+sort contract; client-supplied property names are never passed directly into
+persistence sorting.
+
+### 9. Repository / Query Implementation
+
+`CustomerRepository` additionally extends `JpaSpecificationExecutor<Customer>`
+— the smallest Spring Data mechanism supporting an optional predicate
+composed with `Pageable` in a single query, without introducing QueryDSL or
+another persistence dependency. `CustomerService.getCustomers(...)` calls:
+
+```java
+customerRepository.findAll(CustomerSpecifications.searchByNameOrEmail(search), pageable);
+```
+
+Pagination, sorting, and filtering are all translated into one SQL query
+executed by PostgreSQL (`WHERE ... LIKE ... ORDER BY ... LIMIT ... OFFSET ...`)
+— there is no in-memory filtering, sorting, or loading of unrelated rows.
+
+### 10. Flyway / Schema — No Migration Added
+
+The existing `V1__create_customer_table.sql` schema was inspected and found
+sufficient: `firstName`/`lastName`/`email` are plain, unindexed `VARCHAR`
+columns, and with ~200 demo rows a sequential scan for `LIKE` search and
+sort is not a genuine performance concern. No `V2` migration was added —
+introducing an index without a demonstrated need would have been
+speculative schema churn for this milestone's scale. `pesel_encrypted`/
+`pesel_lookup` columns/constraints were not touched.
+
+### 11. Angular Feature Structure
+
+```
+frontend/src/app/features/admin/customers/
+  models/
+    customer-list-item.model.ts   — CustomerListItem (mirrors CustomerListItemResponse)
+    customer-query.model.ts       — CustomerQuery, CustomerSortField, SortDirection
+    page-response.model.ts        — PageResponse<T> (mirrors backend PageResponse<T>)
+  services/
+    customer.service.ts           — GET /api/customers via ApiService
+  pages/customer-list/
+    customer-list-page.component.{ts,html,scss,spec.ts}
+```
+
+`/admin/customers` (already ADMIN-protected by `adminAreaGuard`, M4.3) now
+lazily loads `CustomerListPageComponent` instead of `FeaturePlaceholderComponent`.
+
+### 12. Reactive Query Flow
+
+`CustomerListPageComponent` composes exactly one request pipeline:
+
+```typescript
+combineLatest([search$, toObservable(page), toObservable(pageSize),
+               toObservable(sortField), toObservable(sortDirection)])
+  .pipe(switchMap(([...]) => customerService.getCustomers(query).pipe(catchError(...))))
+  .subscribe(...)
+```
+
+- `search$` = `valueChanges` → `debounceTime(300ms)` → `distinctUntilChanged()`
+- `page`/`pageSize`/`sortField`/`sortDirection` are Signals bridged to
+  Observables via `toObservable()` (Angular's `rxjs-interop`), read as field
+  initializers (constructor-time injection context) rather than inside
+  `ngOnInit` — `toObservable()` requires an injection context.
+- `switchMap` guarantees an obsolete in-flight request can never overwrite a
+  newer one (e.g. a fast second keystroke's request wins over a slow first).
+- A separate `searchControl.valueChanges` subscription resets `page` to 0 on
+  every new search term.
+- Sort-header interaction (`onSortChange`) also resets `page` to 0.
+
+### 13. `app-data-table` — New `shared/ui` Control
+
+```
+frontend/src/app/shared/ui/data-table/
+  data-table.model.ts       — DataTableColumn<T>, DataTableSortEvent
+  data-table.component.{ts,html,scss,spec.ts}
+```
+
+Wraps Angular Material's `mat-table` + `matSort` primitives. Has **no
+knowledge of Customer or any other business domain** — it is driven entirely
+by caller-supplied `DataTableColumn<T>[]` + `T[]` rows, and reports sort
+requests upward via `(sortChange)` without sorting rows itself (server-side
+sorting is owned by the consuming feature). Exported from `shared/ui`'s
+barrel and demonstrated in `/ux-demo` with static fictional rows (no backend
+call) per the M4.2 living-catalog rule.
+
+### 14. Paginator — Raw Material, No Wrapper
+
+`mat-paginator` is used directly in `CustomerListPageComponent` per M4.2's
+rule: a wrapper is only justified when it captures LeaseDemo-specific
+conventions, and plain Material paginator + `(page)` event handling
+(`onPageChange`) required no such convention here. Every page-index/size
+change re-issues a server request — Angular never re-paginates an
+already-fetched larger page.
+
+### 15. Loading / Empty / Error States
+
+- **Loading**: `app-data-table`'s own `[loading]` input flag + a
+  `role="status"` indicator; `viewState()` also drives disabling the
+  results area during in-flight requests. Kept feature/component-local per
+  M4.2's "don't overabstract" guidance — no `shared/ui/loading-state/` was
+  introduced since a plain conditional message met the need.
+- **Empty**: two distinct messages — `"No customers yet."` (empty database)
+  vs `"No customers match your search."` (filtered search with zero
+  matches) — determined by whether `searchControl.value` is non-blank when
+  `totalElements === 0`.
+- **Error**: a restrained message plus a real `<button>` "Retry" action
+  (`retry()` re-emits the current search value, which is part of the
+  composed pipeline and therefore re-issues the request). No backend
+  stack traces/exception internals are ever shown.
+
+Both empty/error states remained feature-local — no reusable
+`shared/ui/empty-state|error-state` control emerged as clearly generalizable
+from this single occurrence.
+
+### 16. UX Demo Additions
+
+`/ux-demo`'s "Data table" section renders `app-data-table` against the
+existing static `DEMO_LEASE_CUSTOMERS` fictional dataset (unchanged from
+M4.2) — no Customer backend call, no PostgreSQL, no Keycloak dependency.
+
+### 17. Responsive / Accessibility
+
+- `app-data-table`'s host scrolls horizontally (`overflow-x: auto`) with a
+  `min-width` on the table, preserving all columns rather than silently
+  dropping data at narrower widths.
+- Sortable headers use Material's `mat-sort-header` (native ARIA sort-state
+  announcement); the search `app-input` carries its own accessible
+  `<mat-label>`; the error Retry action is a real `<button>`.
+
+### 18. Backend Tests Added
+
+`CustomerControllerTest` (+5): no-JWT → 401; CUSTOMER role → 403; ADMIN role
+→ 200 with `peselEncrypted`/`peselLookup`/`keycloakUserId` asserted absent
+from the JSON response; unsupported sort field → 400.
+
+`CustomerServiceTest` (+6): default page/size + default sort; page-size
+clamped to 100; negative page clamped to 0; supported sort field + `desc`
+direction honored; unsupported sort field throws `InvalidSortFieldException`
+without querying the repository; `Page<Customer>` content/metadata correctly
+mapped into `PageResponse<CustomerListItemResponse>`.
+
+**Backend result**: `mvn clean verify` → `BUILD SUCCESS`, 59/59 tests passing
+(19 of which are the M4.4 additions above; the remaining 40 are pre-existing
+M4.0–M4.3 suites, unaffected).
+
+### 19. Frontend Tests Added
+
+- `customer.service.spec.ts` — query-parameter construction (minimal vs.
+  search+sort), typed `PageResponse<CustomerListItem>` round-trip, using
+  `HttpTestingController`.
+- `data-table.component.spec.ts` — renders supplied columns/rows, shows a
+  loading indicator, emits `sortChange` on a sortable header interaction.
+- `customer-list-page.component.spec.ts` — initial load, loading state,
+  debounced search resets page to 0, page change issues a new server
+  request, sort change issues a new server request and resets page,
+  API error surfaces the error state, empty response surfaces the
+  no-customers empty state.
+- `ux-demo-page.component.spec.ts` — extended to assert the new
+  `app-data-table` example renders its 3 static fictional rows.
+
+**Frontend result**: `npm run test:ci` → `TOTAL: 86 SUCCESS` (0 failures).
+
+### 20. Build / Bundle / Lint
+
+- `npm run build` and `npm run build:prod` both succeed; no production
+  budget warnings (`customer-list-page-component` lazy chunk: ~100.9 kB raw
+  / ~22.6 kB estimated transfer — well within the existing lazy-chunk
+  pattern).
+- `npm run lint` reproduces the pre-existing, previously documented
+  (M4.2/M4.3) infrastructure gap — `Could not find the
+  '@angular-eslint/builder:lint' builder's node package.` — unrelated to
+  M4.4 code and intentionally left unresolved per scope guardrails.
+
+### 21. Local Validation
+
+Verified via `mvn clean verify` (backend) and `npm run build` / `build:prod`
+/ `test:ci` (frontend) rather than a live Keycloak ADMIN session — no
+existing live Keycloak identity in this environment was confirmed to carry
+the ADMIN realm role, and per the milestone's own scope guard, the Keycloak
+realm was not modified to fabricate one. ADMIN/CUSTOMER/unauthenticated
+authorization behavior is instead conclusively verified by
+`CustomerControllerTest`'s three dedicated authorization tests (401/403/200)
+against the real `SecurityConfig` bean via `@WebMvcTest` + `@Import(SecurityConfig.class)`.
+
+### 22. Implemented vs. Deferred
+
+**Implemented**: server-side paged/sorted/searched `GET /api/customers`;
+ADMIN-only authorization; `PageResponse<T>`; `CustomerListItemResponse`;
+sort allow-list; `app-data-table`; Admin Customer list page; reactive
+search/page/sort query flow; UX Demo data-table example.
+
+**Explicitly deferred** (per milestone scope): Customer detail page, editing,
+deletion, Admin Customer creation UI, PESEL display, `/me`, lease
+management, customer profile editing, advanced filters, CSV export, bulk
+actions, caching/Redis, audit trail.
+
+### 23. Interview Q&A
+
+**Q: Why use server-side pagination instead of loading all Customers?**
+A: The API and database remain scalable as the dataset grows, and the
+browser only receives the rows needed for the current page.
+
+**Q: Why not return Spring Page directly?**
+A: An application-owned `PageResponse<T>` keeps the external API contract
+stable and avoids coupling clients to Spring Data's own `Page` serialization
+shape.
+
+**Q: Why use switchMap for search?**
+A: Newer search criteria supersede obsolete in-flight requests, preventing a
+stale response from becoming the displayed result.
+
+**Q: Why is the Admin route guard not sufficient security?**
+A: Angular guards protect navigation/UX. Spring Security's declarative
+`hasRole("ADMIN")` on `GET /api/customers` is the actual trust boundary for
+the Customer data itself.
+
+**Q: Why is PESEL absent from the Customer list DTO?**
+A: The list view does not need it, and sensitive data should never cross an
+API boundary without a concrete, present business requirement.
+
+**Q: Why restrict sortable fields to an allow-list?**
+A: The API owns its supported query contract instead of exposing arbitrary,
+possibly internal, persistence property names supplied by the client.
+
+**Q: Why JpaSpecificationExecutor instead of a derived query method or
+QueryDSL?**
+A: It is the smallest Spring Data mechanism that composes an optional
+predicate with `Pageable` in one database query, without adding a new
+dependency for a single, simple search requirement.
+
+**Q: Why no new Flyway migration?**
+A: The existing schema was inspected and found adequate at the current
+~200-row demo scale; adding an index without a demonstrated need would have
+been speculative, unjustified schema churn.
 
 

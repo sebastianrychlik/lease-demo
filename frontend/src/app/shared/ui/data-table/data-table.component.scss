@@ -1,0 +1,16 @@
+.app-data-table {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.app-data-table__loading {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--ld-color-text-secondary, #616161);
+}
+
+.app-data-table__table {
+  width: 100%;
+  min-width: 640px;
+}

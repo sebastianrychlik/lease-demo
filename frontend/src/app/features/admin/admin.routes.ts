@@ -25,8 +25,8 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'customers',
         loadComponent: () =>
-          import('../../shared/components/feature-placeholder/feature-placeholder.component').then(
-            (m) => m.FeaturePlaceholderComponent
+          import('./customers/pages/customer-list/customer-list-page.component').then(
+            (m) => m.CustomerListPageComponent
           ),
         data: { title: 'Customers' },
       },
