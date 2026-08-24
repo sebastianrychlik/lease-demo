@@ -1,0 +1,115 @@
+<div class="ux-demo">
+  <app-page-header
+    title="LeaseDemo UX Demo"
+    subtitle="Living design-system catalog — consumes the real shared/ui controls"
+  >
+    <app-button variant="secondary">Export</app-button>
+    <app-button variant="primary">New example</app-button>
+  </app-page-header>
+
+  <!-- A. Typography -->
+  <section class="ux-demo__section">
+    <h2 class="ux-demo__section-title">Typography</h2>
+    <app-card>
+      <div class="flex flex-col gap-2">
+        <h1 class="ux-demo__type-page-title">Page title</h1>
+        <h2 class="ux-demo__type-section-title">Section heading</h2>
+        <p class="ux-demo__type-body">
+          Normal body text is used for the majority of application content —
+          readable, restrained, and set at a comfortable line height.
+        </p>
+        <p class="ux-demo__type-secondary">
+          Secondary / helper text is used for supporting detail, timestamps,
+          and hints.
+        </p>
+        <span class="ux-demo__type-label">Field label</span>
+      </div>
+    </app-card>
+  </section>
+
+  <!-- B. Buttons -->
+  <section class="ux-demo__section">
+    <h2 class="ux-demo__section-title">Buttons</h2>
+    <app-card>
+      <div class="flex flex-wrap items-center gap-3">
+        <app-button variant="primary">Primary</app-button>
+        <app-button variant="secondary">Secondary</app-button>
+        <app-button variant="danger">Danger</app-button>
+        <app-button variant="primary" [disabled]="true">Disabled</app-button>
+      </div>
+    </app-card>
+  </section>
+
+  <!-- C. Cards -->
+  <section class="ux-demo__section">
+    <h2 class="ux-demo__section-title">Cards</h2>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      @for (customer of demoCustomers; track customer.leaseReference) {
+        <app-card>
+          <div class="flex flex-col gap-1">
+            <span class="ux-demo__type-label">{{ customer.leaseReference }}</span>
+            <span class="ux-demo__type-body ux-demo__card-title">{{ customer.customerName }}</span>
+            <span class="ux-demo__type-secondary">{{ customer.vehicleDescription }}</span>
+            <div class="flex items-center justify-between pt-2">
+              <span class="ux-demo__type-body">{{ customer.monthlyAmount }}</span>
+              <span
+                class="ux-demo__status"
+                [class.ux-demo__status--active]="customer.status === 'Active'"
+                [class.ux-demo__status--pending]="customer.status === 'Pending'"
+                [class.ux-demo__status--closed]="customer.status === 'Closed'"
+              >
+                {{ customer.status }}
+              </span>
+            </div>
+          </div>
+        </app-card>
+      }
+    </div>
+  </section>
+
+  <!-- D. Page headers -->
+  <section class="ux-demo__section">
+    <h2 class="ux-demo__section-title">Page headers</h2>
+    <div class="flex flex-col gap-4">
+      <app-card>
+        <app-page-header title="Title only"></app-page-header>
+      </app-card>
+      <app-card>
+        <app-page-header title="Title with subtitle" subtitle="A short supporting description">
+        </app-page-header>
+      </app-card>
+      <app-card>
+        <app-page-header title="Customers" subtitle="Manage leasing customers">
+          <app-button variant="primary">Add customer</app-button>
+        </app-page-header>
+      </app-card>
+    </div>
+  </section>
+
+  <!-- E. Inputs -->
+  <section class="ux-demo__section">
+    <h2 class="ux-demo__section-title">Inputs</h2>
+    <app-card>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <app-input label="Customer name" placeholder="Jane Doe"></app-input>
+        <app-input label="Email" placeholder="jane.doe@example.com"></app-input>
+        <app-input label="Disabled field" placeholder="Not editable" [disabled]="true"></app-input>
+        <app-input label="PESEL" [invalid]="true" errorMessage="Invalid PESEL checksum"></app-input>
+      </div>
+    </app-card>
+  </section>
+
+  <!-- F. Material integration -->
+  <section class="ux-demo__section">
+    <h2 class="ux-demo__section-title">Material integration</h2>
+    <app-card>
+      <div class="flex items-center gap-4">
+        <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
+        <span class="ux-demo__type-secondary">
+          Angular Material's progress indicator, themed with LeaseDemo's
+          corporate primary color via the shared design tokens.
+        </span>
+      </div>
+    </app-card>
+  </section>
+</div>

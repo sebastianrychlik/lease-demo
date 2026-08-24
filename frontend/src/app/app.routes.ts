@@ -39,6 +39,16 @@ export const APP_ROUTES: Routes = [
       ),
   },
   {
+    // LeaseDemo's living design-system catalog (M4.2). Directly routable
+    // for now because role-aware Admin/Customer shells do not exist yet.
+    // FUTURE: once they do, /ux-demo must only be reachable from
+    // Admin/developer-facing navigation, never Customer-facing navigation.
+    path: 'ux-demo',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./features/ux-demo/ux-demo.routes').then((m) => m.UX_DEMO_ROUTES),
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./shared/components/not-found/not-found.component').then(

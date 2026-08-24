@@ -10,12 +10,13 @@ document. Sections are explicitly marked as **IMPLEMENTED** or
 **PLANNED / FUTURE ARCHITECTURE** — never assume a "PLANNED" section
 already exists in code.
 
-Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, and M4.1.3**
+Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, M4.1.3, and M4.2**
 (persistence foundation, the initial `Customer` domain, OpenAPI/Swagger UI
-documentation, JWT-bound customer identity, and a local-only mock
-Customer data seeder).
+documentation, JWT-bound customer identity, a local-only mock Customer
+data seeder, and the frontend design-system foundation).
 
-Future planned scope: M4.2 (LeaseApplication) and beyond.
+Future planned scope: the `LeaseApplication` domain and role-aware
+Admin/Customer application shells, beyond M4.2.
 
 ---
 
@@ -2088,3 +2089,306 @@ build-time isolation change:
 | Credit scoring | **FUTURE** |
 | PDF generation | **FUTURE** |
 | E-signature | **FUTURE** |
+
+---
+
+## M4.2 — Frontend Design System Foundation — IMPLEMENTED
+
+### 1. Objective
+
+Before implementing either the Admin or Customer application shells, M4.2
+establishes a single, permanent LeaseDemo frontend visual/component
+foundation: Angular Material (primitives/accessibility) + Tailwind CSS
+(layout/utility styling) + a small `shared/ui` control library + a
+permanent `/ux-demo` living component catalog. This milestone deliberately
+does **not** implement AdminLayout, CustomerLayout, role-based shell
+selection, or any real Customer list/table UI — those are explicitly
+deferred to a later milestone.
+
+### 2. Dependencies Added
+
+| Package | Version | Rationale |
+|---|---|---|
+| `@angular/material` | `18.2.14` (exact) | Matches the project's existing Angular 18.x line exactly (peer-dependency compatible); newest 18.x patch at time of installation. |
+| `@angular/cdk` | `18.2.14` (exact) | Required peer of `@angular/material`; kept in lockstep. |
+| `tailwindcss` | `3.4.17` (dev) | Tailwind v3 uses the mature PostCSS pipeline that Angular CLI's `@angular-devkit/build-angular:application` builder auto-detects out of the box (via a root `tailwind.config.js`). Tailwind v4's new engine targets a different build integration model not demonstrated as a drop-in fit for this Angular CLI version, so v3 was chosen deliberately over "latest" per the milestone's compatibility-first instruction. |
+| `postcss` | `8.4.49` (dev) | Required by Tailwind v3/Angular CLI's PostCSS pipeline. |
+| `autoprefixer` | `10.4.20` (dev) | Standard Tailwind v3 companion for vendor-prefixing. |
+
+No Angular, TypeScript, or RxJS version changes were made. No other UI/CSS
+framework, icon package, or Storybook was introduced.
+
+### 3. Responsibility Split (permanent project rule)
+
+```
+Angular Material  →  primitive/behavior/accessibility layer
+                      (buttons, form fields, inputs, dialogs, tables,
+                       sorting, pagination, snackbars, progress indicators)
+
+Tailwind CSS      →  layout / spacing / sizing / alignment / responsive
+                      breakpoints / simple visual utilities
+
+SCSS              →  Material theme integration, and the rare cases where
+                      a small component-level rule is clearer than a long
+                      Tailwind utility chain (e.g. Material CSS custom
+                      property overrides)
+
+shared/ui         →  LeaseDemo's own reusable, application-level UI API
+                      (app-button, app-card, app-page-header, app-input)
+
+/ux-demo          →  living visual catalog that CONSUMES shared/ui; never
+                      a second, duplicate implementation of those controls
+```
+
+Features are expected to consume `<app-button>`, `<app-card>`, etc. when
+LeaseDemo wants a stable, reusable convention. Raw Material usage directly
+in a one-off feature template remains acceptable where a shared wrapper
+would add no value — not every Material primitive is wrapped.
+
+### 4. Design Tokens — Single Source of Truth
+
+`frontend/src/styles/_tokens.scss` is the **one** place LeaseDemo's core
+visual tokens are declared (primary/primary-hover, accent, surface/
+surface-muted, border, text-primary/secondary/on-primary, success/warning/
+danger, radius, shadow, font family). Values were chosen for a
+conservative corporate banking/leasing character: dark slate/navy primary
+(`#1e293b`), white/near-white surfaces, a single restrained blue accent,
+subtle borders/shadows, small-to-moderate radius — no neon, gradients, or
+glassmorphism.
+
+These SCSS variables are simultaneously emitted as CSS custom properties
+(`--ld-color-primary`, etc.) on `:root`. Both other styling mechanisms
+consume this same bridge rather than maintaining independent copies:
+
+- **Tailwind** (`frontend/tailwind.config.js`) maps utility color/radius/
+  shadow names (`bg-surface`, `text-secondary`, `bg-danger`, `rounded-sm`,
+  …) to `var(--ld-color-*)` / `var(--ld-radius-*)` / `var(--ld-shadow-*)` —
+  it never re-declares a raw hex value.
+- **Angular Material** (`frontend/src/styles/_material-theme.scss`) builds
+  its M3 theme (`mat.define-theme`) from the closest stock Material
+  palettes for internal chrome/state-layers, then overrides the small set
+  of visible M3/MDC CSS custom properties (`--mat-sys-primary`,
+  `--mdc-filled-button-container-color`, …) with the same `tokens.$ld-*`
+  SCSS variables, so Material's visible primary/surface/text colors are
+  byte-identical to LeaseDemo's canonical tokens.
+
+Changing a brand color therefore only ever requires editing
+`_tokens.scss`.
+
+### 5. Global Styles
+
+`frontend/src/styles.scss` stays small and intentional: it only
+`@use`s `styles/tokens` and `styles/material-theme`, emits the three
+`@tailwind` layer directives, and keeps a minimal box-sizing/root
+reset. Component-specific styling lives with each component.
+
+Tailwind's `preflight` base-reset layer is explicitly disabled
+(`corePlugins: { preflight: false }`) because Angular Material ships its
+own well-tested component resets; running both reset layers risked
+visibly fighting each other (e.g. default `<button>`/`<table>`
+appearance). LeaseDemo's own minimal reset in `styles.scss` covers the
+gap instead.
+
+### 6. `shared/ui` — Implemented Controls
+
+```
+frontend/src/app/shared/ui/
+  button/button.component.{ts,scss,spec.ts}
+  card/card.component.{ts,scss,spec.ts}
+  page-header/page-header.component.{ts,scss,spec.ts}
+  input/input.component.{ts,scss,spec.ts}
+  index.ts
+```
+
+All four are standalone, `ChangeDetectionStrategy.OnPush`, selector
+prefix `app`. No NgModule was introduced for this library. No
+speculative controls (data-table, paginator, dialog, badge, select,
+empty/loading state) were added — those will be introduced when a real
+feature actually needs them.
+
+- **`app-button`** — wraps `mat-flat-button` (real `<button>` semantics,
+  ripple, focus, native `disabled`). Inputs: `variant`
+  (`'primary' | 'secondary' | 'danger'`, default `'primary'`), `disabled`
+  (`boolean`, default `false`). Content is projected
+  (`<app-button>Save customer</app-button>`). No configuration explosion —
+  exactly the two inputs the milestone asked for.
+- **`app-card`** — a zero-input surface/container (`background`, `border`,
+  `border-radius`, subtle `box-shadow`, padding, all from tokens). Content
+  is projected; layout of that content is left to the caller via
+  Tailwind utility classes on the projected markup.
+- **`app-page-header`** — inputs `title` (`input.required<string>()`,
+  rendered as a semantic `<h1>`) and optional `subtitle`
+  (`string | undefined`). A projected actions area (typically
+  `<app-button>`s) renders trailing-aligned; hidden via `:empty` CSS when
+  nothing is projected.
+- **`app-input`** — wraps `mat-form-field` + `matInput` with a custom
+  `ErrorStateMatcher` driven by an explicit `invalid` input, and
+  implements `ControlValueAccessor` so it works transparently with both
+  `[(ngModel)]` and reactive `[formControl]`/`formControlName` — it does
+  **not** reimplement or replace Angular Forms. Inputs: `label`,
+  `placeholder`, `disabled`, `invalid`, `errorMessage`.
+
+`frontend/src/app/shared/ui/index.ts` is a small barrel re-exporting all
+four components (and the `AppButtonVariant` type) so features/UX Demo
+import from a single, discoverable path.
+
+
+### 7. `/ux-demo` — Living Design-System Catalog
+
+```
+frontend/src/app/features/ux-demo/
+  ux-demo.routes.ts
+  pages/ux-demo-page/ux-demo-page.component.{ts,html,scss,spec.ts}
+  data/ux-demo.data.ts
+```
+
+Routed at `/ux-demo` (registered in `app.routes.ts`, lazy-loaded via
+`loadChildren`). The page imports and composes the **real**
+`ButtonComponent`, `CardComponent`, `PageHeaderComponent`, and
+`InputComponent` from `shared/ui` — it contains zero duplicate
+implementations of those controls. Sections:
+
+- **Typography** — page title, section heading, body text, secondary/
+  helper text, field label, all using LeaseDemo's typography scale.
+- **Buttons** — every actually-supported `app-button` variant/state:
+  primary, secondary, danger, disabled. No invented variants.
+- **Cards** — three fictional lease/customer cards (`ux-demo.data.ts`)
+  rendered via `app-card`, with a small inline status pill.
+- **Page headers** — title-only, title+subtitle, and title+subtitle+
+  projected-action examples, matching the milestone's target usage
+  pattern.
+- **Inputs** — normal, placeholder, disabled, and an error/invalid state
+  with `errorMessage`, all via `app-input`.
+- **Material integration** — a themed `mat-progress-spinner` proving the
+  LeaseDemo primary color flows correctly into Material's own components.
+
+`ux-demo.data.ts` contains a small, static, frontend-only, clearly
+fictional dataset (`DEMO_LEASE_CUSTOMERS`) — no backend/Customer API call,
+no PostgreSQL, no Keycloak dependency, no real personal information.
+
+**Permanent convention (documented here for future milestones):**
+whenever a meaningful new reusable control is added to `shared/ui/` (e.g.
+a future `app-badge`, `app-data-table`, `app-paginator`, `app-dialog`,
+`app-select`, or loading/empty/error state control), a representative
+example should normally also be added to `/ux-demo`, keeping it a living
+catalog synchronized with the real component library.
+
+### 8. Routing / Future Security
+
+`/ux-demo` currently sits behind the existing `authGuard` (any
+authenticated session), exactly like `/dashboard` and `/exchange-rates` —
+no new authentication/authorization mechanism was introduced.
+
+**FUTURE:** once role-aware Admin/Customer application shells exist,
+`/ux-demo` must be reachable **only** from Admin/developer-facing
+navigation and **never** exposed in Customer-facing navigation. This
+milestone does not implement that navigation restriction because doing so
+would require pulling AdminLayout/CustomerLayout into scope, which is
+explicitly deferred.
+
+### 9. Accessibility
+
+- `app-button` renders a real `<button type="button">`; `disabled` sets
+  the native `disabled` attribute (semantic, not a CSS-only style).
+- `app-page-header` uses a semantic `<h1>` for its title.
+- `app-input` keeps Material's label/`mat-error`/focus-ring accessibility
+  behavior intact and wires a real `ControlValueAccessor` so screen
+  readers and Angular Forms validation continue to work normally.
+- No clickable `<div>`s were introduced in place of buttons/links.
+
+### 10. Responsive Foundation
+
+No fixed-width assumptions were baked in; `/ux-demo` uses Tailwind's
+responsive grid utilities (e.g. `sm:grid-cols-2 lg:grid-cols-3`) so its
+card section reflows at tablet width, and `app-page-header` wraps its
+actions area via `flex-wrap`. Full Admin/Customer sidebar responsive
+behavior remains future work (§ M4.2 explicitly excludes those shells).
+
+
+### 11. Tests
+
+Focused Jasmine/Karma unit tests were added for every new shared control
+and for the UX Demo page (`ng test --no-watch --browsers=ChromeHeadlessCI`
+→ **45/45 passing**, 0 failing), covering:
+
+- `app-button`: projected content, variant reflection (default + explicit),
+  native `disabled` semantics.
+- `app-page-header`: title rendering, optional subtitle presence/absence,
+  projected action rendering.
+- `app-card`: projected content renders inside the card surface.
+- `app-input`: label, placeholder, disabled state, `mat-error` rendering
+  when invalid, and `ngModel` round-trip via a host component.
+- `UxDemoPageComponent`: page renders, and composes the real
+  `app-page-header`/`app-button`/`app-card`/`app-input` controls (not
+  duplicate markup).
+
+No Angular Material internals, CSS-framework implementation details, or
+snapshot tests were added.
+
+### 12. Validation Performed
+
+- `npm run build` (development configuration) — succeeded, no errors.
+- `npm run build:prod` (production configuration) — succeeded, no errors.
+  Initial bundle: **390.20 kB raw / 100.60 kB estimated transfer**,
+  comfortably under the existing `500kB` warning / `1MB` error initial
+  budget; no `anyComponentStyle` budget warnings were reported.
+  **Budgets in `angular.json` were left untouched** — no artificial
+  increase was needed.
+- `npm run test:ci` — **45/45 tests passing**.
+- `npm run lint` — fails with `Could not find the '@angular-eslint/builder:lint' builder's node package`. This is a **pre-existing** condition (no ESLint packages are present in `package.json`/`devDependencies` prior to this milestone) and was not introduced or repaired by M4.2, per the instruction not to fix unrelated historical failures.
+- Manual verification: `ng serve` dev server responded `200` for
+  `GET /ux-demo`; inspection of the compiled `styles-*.css` confirmed
+  both a Tailwind utility (`flex-wrap:wrap`) and Material component
+  classes (`mat-mdc-*`) are present in the same stylesheet, and that
+  `--mat-sys-primary` resolves to LeaseDemo's canonical token value
+  (`#1e293b`), proving the Material/Tailwind/token integration works
+  end-to-end rather than merely compiling.
+
+### 13. Explicit Non-Goals (deferred)
+
+- `AdminLayout` — **NOT implemented**.
+- `CustomerLayout` — **NOT implemented**.
+- Role-based shell/navigation selection — **NOT implemented**.
+- Any real Customer list/table/pagination UI or Customer API call from
+  the frontend — **NOT implemented**.
+- Storybook or any second UI/CSS/component framework — **NOT introduced**.
+- Backend, Spring Security, Keycloak configuration, Flyway, or the
+  `Customer` domain — **untouched**.
+
+### 14. Interview-Ready Notes
+
+**Q: Why combine Angular Material and Tailwind?**
+A: Material provides robust, accessible, behavior-rich primitives (focus
+management, ARIA, ripple, keyboard interaction), while Tailwind provides
+efficient layout and application-specific visual composition without
+writing large amounts of bespoke CSS for every spacing/alignment need.
+
+**Q: Why wrap some Material components in shared UI controls?**
+A: To expose a stable LeaseDemo-level UI API and centralize recurring
+visual and behavioral conventions (variants, tokens, disabled semantics)
+without coupling every feature directly to Material implementation
+details.
+
+**Q: Why not wrap every Material component?**
+A: Unnecessary wrappers create abstraction without value. Shared controls
+are introduced only where reuse, consistency, or encapsulation actually
+justifies them — e.g. a one-off Material usage in a highly specific
+feature does not need a shared wrapper.
+
+**Q: Why create the design system before Admin/Customer layouts?**
+A: Both role-specific areas should consume one visual/component system
+rather than independently inventing their own styling conventions,
+avoiding visual drift between Admin and Customer experiences.
+
+**Q: Why have UX Demo if Storybook exists (as a concept)?**
+A: LeaseDemo only needs a lightweight in-application living catalog at
+this stage. It provides fast visual verification without adding
+Storybook's dependency/configuration/build overhead, while still fully
+demonstrating the real, working components.
+
+**Q: What is the difference between shared/ui and UX Demo?**
+A: `shared/ui` **implements** reusable controls. `/ux-demo` **consumes**
+and demonstrates them — it is a consumer of the design system, never a
+second design system.
+
+
