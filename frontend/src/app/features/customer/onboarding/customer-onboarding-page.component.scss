@@ -1,0 +1,48 @@
+.onboarding-page__container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.onboarding-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.onboarding-form__section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  margin: 0;
+}
+
+.onboarding-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  > * {
+    flex: 1 1 220px;
+  }
+}
+
+.onboarding-form__field {
+  width: 100%;
+}
+
+.onboarding-form__server-error {
+  color: var(--color-danger, #b91c1c);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.onboarding-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}

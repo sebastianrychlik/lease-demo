@@ -3076,4 +3076,391 @@ A: The existing schema was inspected and found adequate at the current
 ~200-row demo scale; adding an index without a demonstrated need would have
 been speculative, unjustified schema churn.
 
+---
+
+## M4.5 — Customer Onboarding & Self-Service Profile
+
+### 1. Overview
+
+M4.5 delivers the first real CUSTOMER self-service flow: a freshly
+authenticated Keycloak CUSTOMER either lands on their existing profile, or
+is routed through an onboarding form that persists a new `Customer` row
+bound to their Keycloak identity.
+
+```
+KEYCLOAK CUSTOMER
+       |
+     JWT.sub
+       |
+       v
+GET /api/customers/me
+   /          \
+ 404          200
+  |            |
+  v            v
+ONBOARDING   DASHBOARD / PROFILE
+  |
+PESEL/DOB/GENDER
+VALIDATION
+  |
+  v
+POST /customers
+  |
+  v
+AES + HMAC
+  |
+  v
+PostgreSQL
+```
+
+### 2. JWT.sub Identity Binding (unchanged, reinforced)
+
+`POST /api/customers` already derived `keycloakUserId` exclusively from the
+authenticated JWT `sub` claim (M4.1.2) — `CustomerController` never accepts
+it from the request body, and `CustomerCreateRequest` has no such field.
+M4.5 reuses this exact mechanism for `GET /api/customers/me`: both
+endpoints resolve identity the same way, from
+`@AuthenticationPrincipal Jwt jwt` → `jwt.getSubject()`. No customerId,
+email, or username is ever used to select "whose" Customer profile is
+being read or written.
+
+### 3. GET /api/customers/me
+
+New endpoint, `ROLE_CUSTOMER`-protected via
+`@PreAuthorize("hasRole('CUSTOMER')")` on `CustomerController`:
+
+| Condition                                   | Response |
+|----------------------------------------------|----------|
+| No JWT                                        | 401      |
+| JWT present, no CUSTOMER authority            | 403      |
+| CUSTOMER + no persisted Customer profile      | 404      |
+| CUSTOMER + persisted Customer profile         | 200      |
+| ADMIN + CUSTOMER (both authorities)           | 200 (CUSTOMER authority alone is sufficient) |
+
+The lookup is `CustomerRepository.findByKeycloakUserId(String)` — a single,
+indexed-by-uniqueness lookup (`customers.keycloak_user_id` is `UNIQUE`),
+never an email or username lookup, and never a full-table scan.
+
+A 404 is modeled as an expected condition — `CustomerProfileNotFoundException`
+→ `GlobalExceptionHandler` → HTTP 404 with a `ProblemDetail` body — not a
+server error. This lets Angular distinguish "authenticated, no profile yet"
+(→ onboarding) from any genuine failure.
+
+An `AccessDeniedException` handler was added to `GlobalExceptionHandler` so
+that a `@PreAuthorize` denial (e.g. an ADMIN-only identity calling `/me`)
+returns 403, not the generic 500 that the pre-existing catch-all
+`Exception` handler would otherwise have produced.
+
+### 4. CustomerProfileResponse DTO
+
+A dedicated `CustomerProfileResponse` record (not the JPA entity, not
+`CustomerResponse`) is returned by `/me`:
+
+```
+id, firstName, lastName, email, phoneNumber, dateOfBirth, gender, createdAt
+```
+
+Deliberately excluded:
+
+- `pesel` (never accepted back from persistence in any form)
+- `peselEncrypted`
+- `peselLookup`
+- `keycloakUserId` — the browser already knows its own JWT subject; this
+  DTO plays no role in future identity resolution, so it is not echoed back
+
+PESEL reveal is explicitly **FUTURE** — the profile page shows a
+restrained `PESEL: Registered` status instead.
+
+### 5. POST /api/customers — preserved, not duplicated
+
+The existing creation endpoint already satisfied M4.5's security
+requirements exactly (JWT-derived identity, no client-supplied
+`keycloakUserId`/`customerId`, `DuplicateCustomerException` on repeat
+identity or repeat PESEL). No second onboarding-specific endpoint was
+introduced — Angular's onboarding form calls the same `POST /api/customers`.
+
+### 6. PESEL Structural + Cross-Field Validation — reused, unchanged
+
+`PeselValidator` (M4.1.2) already implemented every rule M4.5 asked for:
+
+- exactly 11 digits
+- checksum digit
+- century/month decoding → valid calendar date
+- cross-check against declared `dateOfBirth`
+- cross-check against declared `gender` (10th digit parity: even = FEMALE,
+  odd = MALE)
+
+`CustomerService.createCustomer(...)` already called it, in this order:
+
+```
+existsByKeycloakUserId  →  peselValidator.validate(...)  →  existsByPeselLookup
+    →  encrypt  →  persist
+```
+
+Cross-field mismatches throw `InvalidPeselException` before any lookup hash
+is computed or any encryption/persistence occurs — invalid data can never
+reach the database. No backend changes were required for validation order
+or invariants; M4.5 confirmed this by inspection and by the existing
+`CustomerServiceTest`/`PeselValidatorTest` suites, which continue to pass
+unmodified.
+
+### 7. AES vs HMAC — unchanged
+
+- **AES-256-GCM** (`pesel_encrypted`): reversible confidentiality, for a
+  legitimate future need to recover the plaintext PESEL.
+- **HMAC-SHA-256** (`pesel_lookup`): deterministic keyed lookup/equality,
+  used for uniqueness without ever decrypting existing rows.
+
+M4.5 introduces no new PESEL storage or cryptography — `/me` never returns
+either derived value, and onboarding's `POST` flows through the exact same
+`CustomerService.createCustomer` path as before.
+
+### 8. Frontend: CurrentCustomerService (single source of truth)
+
+`features/customer/profile/services/current-customer.service.ts` is the
+**only** place in the frontend that calls `GET /api/customers/me`. It
+exposes a small discriminated-union state:
+
+```ts
+type CurrentCustomerState =
+  | { status: 'loading' }
+  | { status: 'found'; profile: CustomerProfile }
+  | { status: 'missing' }
+  | { status: 'error'; message: string };
+```
+
+Route guards, the dashboard, and the profile page all read `state()` /
+`profile()` rather than issuing their own HTTP calls. `createProfile(...)`
+(the onboarding `POST`) updates the same cached state on success, so the
+dashboard/profile page reflect the newly persisted Customer without a full
+page reload. No NgRx — a single `providedIn: 'root'` service with signals
+was sufficient.
+
+### 9. Onboarding Routing / Guards
+
+Two small, focused guards in
+`features/customer/profile/guards/customer-profile.guard.ts`:
+
+- `requireCustomerProfileGuard` — applied to `dashboard`, `profile`,
+  `leases`, `documents`. Redirects to `/customer/onboarding` when the
+  profile is `missing`. Passes through on `error` (a transient backend
+  hiccup must not trap the user in a redirect they cannot escape).
+- `onboardingGuard` — applied to `onboarding` itself. Redirects to
+  `/customer/dashboard` when the profile is already `found` (onboarding
+  must never be shown twice).
+
+These two guards redirect in strictly opposite, non-overlapping
+directions, so no redirect loop is possible by construction.
+
+### 10. Onboarding Page
+
+`/customer/onboarding` — a genuine Reactive Forms page (not
+template-driven), built from `shared/ui` (`app-input`, `app-button`,
+`app-card`, `app-page-header`) plus Angular Material's `MatSelectModule`
+and `MatDatepickerModule` directly (no new shared/ui wrapper was
+introduced — a single onboarding-only date/select field did not meet the
+"genuine reusable value" bar from M4.2/M4.5 guidance).
+
+Two sections: **Personal information** (first/last name, date of birth,
+gender, PESEL) and **Contact information** (email, phone). PESEL is bound
+as plain text (`app-input`), never parsed as a number, never logged, never
+placed in a URL/query param, and never written to `localStorage`/
+`sessionStorage`.
+
+### 11. Frontend PESEL Validator (UX only)
+
+`features/customer/profile/validators/pesel.validator.ts` mirrors the
+backend `PeselValidator` algorithm exactly (11-digit format, checksum,
+century/month decoding, gender parity) so the user gets instant feedback:
+
+- `peselChecksumValidator()` — control-level: format + checksum.
+- `peselCrossFieldValidator(pesel, dateOfBirth, gender)` — group-level:
+  PESEL-encoded DOB/gender vs the declared form values.
+
+**This is UX only.** A malicious or buggy client can call
+`POST /api/customers` directly, bypassing Angular entirely — `PeselValidator`
+(Java) inside `CustomerService` remains the sole authoritative trust
+boundary. The onboarding page's doc comment states this explicitly.
+
+User-facing messages are deliberately generic and non-technical:
+
+- "PESEL must be exactly 11 digits."
+- "Invalid PESEL checksum."
+- "PESEL birth date does not match the selected date of birth."
+- "PESEL gender does not match the selected gender."
+
+No message exposes implementation details like "digit index 9 parity".
+
+### 12. Server Error Mapping
+
+The onboarding page maps backend failures into safe, generic messages —
+never raw `ProblemDetail`/exception text:
+
+| Backend status | Displayed message |
+|-----------------|--------------------|
+| 409 (duplicate identity or PESEL) | "A profile already exists for your account, or this PESEL is already registered." |
+| 400 (validation, incl. cross-field) | "Some of the information provided is invalid. Please review the form and try again." |
+| 401 | "Your session has expired. Please sign in again." |
+| other | "Something went wrong while completing your profile. Please try again later." |
+
+Angular validation passing does not guarantee the backend will accept the
+request — the 400 path above is exercised in tests even though the same
+form-level validators normally prevent submission first.
+
+### 13. Profile Page & Dashboard
+
+`/customer/profile` was upgraded from a placeholder to a real read-only
+page rendering `firstName`, `lastName`, `email`, `phoneNumber`,
+`dateOfBirth`, `gender`, and a restrained `PESEL: Registered` line —
+sourced from the already-loaded `CurrentCustomerService` cache (no
+duplicate `/me` call).
+
+The Customer Dashboard now reads the same cached profile to show
+`Welcome, <firstName>` when available, falling back to a generic subtitle
+otherwise. No lease counts or financial metrics were added — leases remain
+unimplemented.
+
+### 14. Subsequent-Login Behavior
+
+Because identity resolution is exclusively `JWT.sub → keycloak_user_id`:
+
+1. CUSTOMER logs in, `GET /me` → 404 → onboarding → `POST /customers` →
+   Customer persisted.
+2. CUSTOMER logs out, logs back in with the same Keycloak account.
+3. `GET /me` → 200, returning the same row — `onboardingGuard` redirects
+   away from `/customer/onboarding` immediately, and
+   `requireCustomerProfileGuard` allows `/customer/dashboard` /
+   `/customer/profile` directly.
+
+No additional Customer row is ever created for the same `sub` — the
+`customers.keycloak_user_id UNIQUE` constraint remains the authoritative,
+concurrency-safe guarantee (M4.1.2), and `existsByKeycloakUserId` provides
+the friendly early `DuplicateCustomerException` (409) if a second `POST` is
+attempted.
+
+### 15. Real Customer vs Mock Customer Separation
+
+The real local Keycloak CUSTOMER identity was never attached to any
+existing `mock-user-*` row. Onboarding always inserts a brand-new
+`Customer` row with `keycloak_user_id` equal to the authenticated
+`sub`. The ~200 mock rows are untouched. The Admin Customer list
+(`GET /api/customers`, M4.4) naturally shows the new Customer once
+persisted — no separate integration code was needed, since both flows
+share the same `customers` table.
+
+### 16. FUTURE — PATCH /api/customers/me (NOT implemented)
+
+Documented design only:
+
+- `PATCH /api/customers/me` would allow the authenticated CUSTOMER to
+  update selected mutable fields (e.g. phone number, email).
+- Ordinary mutable-field updates would **not** require resending the
+  PESEL.
+- If a future operation needs PESEL re-verification, the supplied
+  plaintext PESEL would be HMAC-SHA-256'd with the existing server-held
+  HMAC key and compared against the stored `pesel_lookup` — never by
+  decrypting AES ciphertext merely to check equality, and never by
+  comparing plaintext against the HMAC string directly.
+- If `dateOfBirth`/`gender` ever become editable, the backend would need
+  to re-validate consistency against the existing PESEL — e.g. by
+  decrypting the stored PESEL (`AesGcmEncryptionService`) and re-running
+  `PeselValidator`, or requiring a dedicated, explicitly verified
+  sensitive-data update flow. This is FUTURE scope only.
+
+### 17. Backend Tests Added (M4.5)
+
+`CustomerControllerTest`:
+- `GET /me` — no JWT → 401
+- `GET /me` — CUSTOMER + matching record → 200, response excludes
+  `peselEncrypted`/`peselLookup`/`pesel`/`keycloakUserId`
+- `GET /me` — CUSTOMER without a record → 404
+- `GET /me` — ADMIN-only → 403
+- `GET /me` — ADMIN+CUSTOMER → 200
+
+`CustomerServiceTest`:
+- `getCurrentCustomerProfile` resolves by `keycloakUserId` (JWT.sub)
+- `getCurrentCustomerProfile` throws `CustomerProfileNotFoundException`
+  when no matching Customer exists
+
+Pre-existing `PeselValidatorTest` and PESEL/DOB/gender cross-field
+coverage in `CustomerServiceTest` were reused unmodified — M4.5 did not
+duplicate assertions that already existed at the validator/service layer.
+All 66 backend tests pass (`mvn clean test`).
+
+### 18. Frontend Tests Added (M4.5)
+
+- `CurrentCustomerService`: initial loading state, 200 → found, 404 →
+  missing (not error), other errors → error state, `createProfile` posts
+  without `keycloakUserId` and updates cached state
+- `pesel.validator`: format/checksum errors, valid PESEL (MALE and
+  FEMALE), DOB cross-field match/mismatch, gender cross-field
+  match/mismatch, structural errors suppress cross-field evaluation
+- `customer-profile.guard`: missing → onboarding redirect, found → allowed,
+  error → allowed through; onboarding found → dashboard redirect, missing →
+  allowed
+- `CustomerOnboardingPageComponent`: required-field validation, email
+  format, PESEL format/checksum, DOB match/mismatch, gender
+  match/mismatch, invalid form blocks submission, valid form submits
+  without `keycloakUserId` and navigates to the dashboard, safe message on
+  409/400 backend responses
+- `CustomerProfilePageComponent`: renders persisted fields, never renders
+  a plaintext PESEL value, fallback message when profile is unavailable
+- `CustomerDashboardPageComponent`: greets by first name when a profile is
+  loaded, generic subtitle otherwise
+
+All 123 frontend tests pass (`npm run test:ci`).
+
+### 19. Interview Q&A (M4.5)
+
+**Q: Why use /api/customers/me instead of /api/customers/{id} for self-service?**
+A: The server derives ownership from the authenticated JWT subject, so the
+browser never chooses which Customer identity it is allowed to access.
+
+**Q: Why validate PESEL against dateOfBirth and gender?**
+A: A structurally valid PESEL can still contradict other Customer data.
+Cross-field validation preserves domain consistency.
+
+**Q: Why validate in Angular and Spring?**
+A: Angular validation improves UX, but it can be bypassed. Spring remains
+the authoritative trust boundary.
+
+**Q: Why use JWT.sub rather than email?**
+A: The subject is the stable identity-provider identifier. Email is
+mutable business/profile data and should not define ownership.
+
+**Q: Why store both encrypted PESEL and HMAC lookup?**
+A: Encryption provides confidentiality and recoverability, while HMAC
+provides deterministic keyed equality/uniqueness checks without decrypting
+every row.
+
+**Q: How would future PESEL verification work?**
+A: HMAC the supplied value using the server-held HMAC key and compare it
+with the stored lookup value using a safe equality mechanism.
+
+**Q: What happens after logout and login?**
+A: The same Keycloak subject resolves to the same persisted Customer row,
+so the existing profile is restored rather than onboarding again.
+
+**Q: Why does a 404 from /me not indicate an error?**
+A: For a freshly authenticated CUSTOMER who has never onboarded, "no
+Customer profile yet" is an expected, first-class application state — not
+a server failure — so it is modeled as a distinct `missing` state in
+`CurrentCustomerService`, not merged into the generic `error` state.
+
+### 20. Scope Confirmation (M4.5)
+
+NOT implemented, as scoped:
+
+- Profile UPDATE/PATCH (`PATCH /api/customers/me`) — documented as FUTURE
+  only, section 16.
+- Customer deletion.
+- PESEL reveal/display anywhere in the frontend.
+- Leases, Documents (still placeholders under `requireCustomerProfileGuard`).
+- NgRx, Redis, another UI framework, Storybook.
+- Any change to Keycloak realm/client configuration.
+- Any change to AES/HMAC algorithms or crypto keys.
+- Any new Flyway migration — the existing schema (`keycloak_user_id`
+  `UNIQUE`, `pesel_encrypted`, `pesel_lookup`) already supported this flow.
+- Attaching the real Keycloak CUSTOMER identity to any `mock-user-*` row.
+
 

@@ -1,0 +1,101 @@
+<app-page-header
+  title="Complete your profile"
+  subtitle="A few details are needed before you can access your leasing account."
+></app-page-header>
+
+<div class="onboarding-page__container">
+  <app-card>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="onboarding-form" novalidate>
+      <section class="onboarding-form__section">
+        <h2 class="onboarding-form__section-title">Personal information</h2>
+
+        <div class="onboarding-form__row">
+          <app-input
+            label="First name"
+            formControlName="firstName"
+            [invalid]="form.controls.firstName.invalid && form.controls.firstName.touched"
+            errorMessage="First name is required."
+          ></app-input>
+          <app-input
+            label="Last name"
+            formControlName="lastName"
+            [invalid]="form.controls.lastName.invalid && form.controls.lastName.touched"
+            errorMessage="Last name is required."
+          ></app-input>
+        </div>
+
+        <div class="onboarding-form__row">
+          <mat-form-field appearance="outline" class="onboarding-form__field">
+            <mat-label>Date of birth</mat-label>
+            <input
+              matInput
+              [matDatepicker]="dobPicker"
+              formControlName="dateOfBirth"
+              [max]="maxDateOfBirth"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
+            <mat-datepicker #dobPicker></mat-datepicker>
+            @if (form.controls.dateOfBirth.invalid && form.controls.dateOfBirth.touched) {
+              <mat-error>Date of birth is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="onboarding-form__field">
+            <mat-label>Gender</mat-label>
+            <mat-select formControlName="gender">
+              <mat-option value="FEMALE">Female</mat-option>
+              <mat-option value="MALE">Male</mat-option>
+            </mat-select>
+            @if (form.controls.gender.invalid && form.controls.gender.touched) {
+              <mat-error>Gender is required.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <app-input
+          label="PESEL"
+          formControlName="pesel"
+          maxlength="11"
+          [invalid]="!!peselErrorMessage"
+          [errorMessage]="peselErrorMessage ?? undefined"
+        ></app-input>
+      </section>
+
+      <section class="onboarding-form__section">
+        <h2 class="onboarding-form__section-title">Contact information</h2>
+
+        <div class="onboarding-form__row">
+          <app-input
+            label="Email"
+            formControlName="email"
+            [invalid]="form.controls.email.invalid && form.controls.email.touched"
+            [errorMessage]="
+              form.controls.email.hasError('required')
+                ? 'Email is required.'
+                : 'Enter a valid email address.'
+            "
+          ></app-input>
+          <app-input
+            label="Phone number"
+            formControlName="phoneNumber"
+            [invalid]="form.controls.phoneNumber.invalid && form.controls.phoneNumber.touched"
+            errorMessage="Phone number is required."
+          ></app-input>
+        </div>
+      </section>
+
+      @if (serverErrorMessage()) {
+        <p class="onboarding-form__server-error" role="alert">{{ serverErrorMessage() }}</p>
+      }
+
+      <div class="onboarding-form__actions">
+        <!-- app-button renders a native type="button"; the form is submitted
+             programmatically via onSubmit() rather than relying on native
+             submit-button semantics (app-button has no submit variant). -->
+        <app-button variant="primary" [disabled]="submitting()" (click)="onSubmit()">
+          {{ submitting() ? 'Submitting…' : 'Complete profile' }}
+        </app-button>
+      </div>
+    </form>
+  </app-card>
+</div>

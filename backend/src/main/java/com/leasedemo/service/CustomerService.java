@@ -2,9 +2,11 @@ package com.leasedemo.service;
 
 import com.leasedemo.dto.CustomerCreateRequest;
 import com.leasedemo.dto.CustomerListItemResponse;
+import com.leasedemo.dto.CustomerProfileResponse;
 import com.leasedemo.dto.CustomerResponse;
 import com.leasedemo.dto.PageResponse;
 import com.leasedemo.entity.Customer;
+import com.leasedemo.exception.CustomerProfileNotFoundException;
 import com.leasedemo.exception.DuplicateCustomerException;
 import com.leasedemo.exception.InvalidSortFieldException;
 import com.leasedemo.mapper.CustomerMapper;
@@ -126,6 +128,29 @@ public class CustomerService {
 
         Customer saved = customerRepository.save(customer);
         return customerMapper.toResponse(saved);
+    }
+
+    /**
+     * Resolves the self-service Customer profile owned by the authenticated
+     * JWT subject (M4.5).
+     *
+     * <p>The lookup key is exclusively {@code keycloakUserId}, derived by
+     * {@code CustomerController} from the validated JWT {@code sub} claim —
+     * never from any client-supplied identifier such as {@code customerId}
+     * or {@code email}.
+     *
+     * @throws CustomerProfileNotFoundException when the authenticated
+     *                                           identity has not yet
+     *                                           completed onboarding; this
+     *                                           is an expected condition,
+     *                                           not a server error
+     */
+    @Transactional(readOnly = true)
+    public CustomerProfileResponse getCurrentCustomerProfile(String keycloakUserId) {
+        Customer customer = customerRepository.findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() -> new CustomerProfileNotFoundException(
+                        "No customer profile exists for the authenticated identity"));
+        return customerMapper.toProfileResponse(customer);
     }
 
     /**

@@ -3,9 +3,11 @@ package com.leasedemo.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leasedemo.config.SecurityConfig;
 import com.leasedemo.dto.CustomerListItemResponse;
+import com.leasedemo.dto.CustomerProfileResponse;
 import com.leasedemo.dto.CustomerResponse;
 import com.leasedemo.dto.PageResponse;
 import com.leasedemo.entity.Gender;
+import com.leasedemo.exception.CustomerProfileNotFoundException;
 import com.leasedemo.exception.DuplicateCustomerException;
 import com.leasedemo.exception.InvalidSortFieldException;
 import com.leasedemo.service.CustomerService;
@@ -123,6 +125,70 @@ class CustomerControllerTest {
                         .contentType("application/json")
                         .content(requestBodyJson()))
                 .andExpect(status().isConflict());
+    }
+
+    private CustomerProfileResponse sampleProfile() {
+        return new CustomerProfileResponse(
+                UUID.randomUUID(), "Jan", "Kowalski", "jan.kowalski@example.com",
+                "+48123456789", LocalDate.of(1944, 5, 14), Gender.MALE, Instant.now());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers/me — no JWT -> 401 Unauthorized")
+    void getMe_noJwt_returns401() throws Exception {
+        mockMvc.perform(get("/api/customers/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers/me — CUSTOMER with matching record -> 200 OK, uses JWT.sub")
+    void getMe_customerWithProfile_returns200() throws Exception {
+        when(customerService.getCurrentCustomerProfile("customer-sub-1")).thenReturn(sampleProfile());
+
+        mockMvc.perform(get("/api/customers/me")
+                        .with(jwt().jwt(builder -> builder.subject("customer-sub-1"))
+                                .authorities(() -> "ROLE_CUSTOMER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("jan.kowalski@example.com"))
+                .andExpect(jsonPath("$.peselEncrypted").doesNotExist())
+                .andExpect(jsonPath("$.peselLookup").doesNotExist())
+                .andExpect(jsonPath("$.pesel").doesNotExist())
+                .andExpect(jsonPath("$.keycloakUserId").doesNotExist());
+
+        verify(customerService).getCurrentCustomerProfile("customer-sub-1");
+    }
+
+    @Test
+    @DisplayName("GET /api/customers/me — CUSTOMER without profile -> 404 Not Found")
+    void getMe_customerWithoutProfile_returns404() throws Exception {
+        when(customerService.getCurrentCustomerProfile(anyString()))
+                .thenThrow(new CustomerProfileNotFoundException(
+                        "No customer profile exists for the authenticated identity"));
+
+        mockMvc.perform(get("/api/customers/me")
+                        .with(jwt().jwt(builder -> builder.subject("customer-sub-2"))
+                                .authorities(() -> "ROLE_CUSTOMER")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers/me — ADMIN-only identity -> 403 Forbidden")
+    void getMe_adminOnly_returns403() throws Exception {
+        mockMvc.perform(get("/api/customers/me")
+                        .with(jwt().jwt(builder -> builder.subject("admin-1"))
+                                .authorities(() -> "ROLE_ADMIN")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /api/customers/me — ADMIN+CUSTOMER identity -> 200 OK (has CUSTOMER authority)")
+    void getMe_adminAndCustomer_returns200() throws Exception {
+        when(customerService.getCurrentCustomerProfile("admin-customer-1")).thenReturn(sampleProfile());
+
+        mockMvc.perform(get("/api/customers/me")
+                        .with(jwt().jwt(builder -> builder.subject("admin-customer-1"))
+                                .authorities(() -> "ROLE_ADMIN", () -> "ROLE_CUSTOMER")))
+                .andExpect(status().isOk());
     }
 
     private CustomerListItemResponse sampleListItem() {

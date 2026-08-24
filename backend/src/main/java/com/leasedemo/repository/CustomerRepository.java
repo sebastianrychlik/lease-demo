@@ -33,4 +33,12 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID>,
      * under concurrent requests.
      */
     boolean existsByKeycloakUserId(String keycloakUserId);
+
+    /**
+     * Resolves the Customer profile owned by the authenticated Keycloak
+     * identity (JWT {@code sub}) — the sole lookup mechanism backing
+     * {@code GET /api/customers/me} (M4.5). Never looked up by email or
+     * any other client-supplied identifier.
+     */
+    Optional<Customer> findByKeycloakUserId(String keycloakUserId);
 }

@@ -2,10 +2,12 @@ package com.leasedemo.service;
 
 import com.leasedemo.dto.CustomerCreateRequest;
 import com.leasedemo.dto.CustomerListItemResponse;
+import com.leasedemo.dto.CustomerProfileResponse;
 import com.leasedemo.dto.CustomerResponse;
 import com.leasedemo.dto.PageResponse;
 import com.leasedemo.entity.Customer;
 import com.leasedemo.entity.Gender;
+import com.leasedemo.exception.CustomerProfileNotFoundException;
 import com.leasedemo.exception.DuplicateCustomerException;
 import com.leasedemo.exception.InvalidPeselException;
 import com.leasedemo.exception.InvalidSortFieldException;
@@ -31,6 +33,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -189,6 +192,33 @@ class CustomerServiceTest {
         ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
         verify(customerRepository).save(customerCaptor.capture());
         assertThat(customerCaptor.getValue().getKeycloakUserId()).isEqualTo(trustedSubject);
+    }
+
+    // ── M4.5: self-service GET /api/customers/me ───────────────────────────────
+
+    @Test
+    @DisplayName("getCurrentCustomerProfile: resolves profile by keycloakUserId (JWT.sub)")
+    void getCurrentCustomerProfile_existingCustomer_returnsProfile() {
+        Customer customer = sampleCustomer();
+        CustomerProfileResponse profile = new CustomerProfileResponse(
+                customer.getId(), "Jan", "Kowalski", "jan.kowalski@example.com",
+                "+48123456789", LocalDate.of(1944, 5, 14), Gender.MALE, Instant.now());
+
+        when(customerRepository.findByKeycloakUserId(KEYCLOAK_USER_ID)).thenReturn(Optional.of(customer));
+        when(customerMapper.toProfileResponse(customer)).thenReturn(profile);
+
+        CustomerProfileResponse result = customerService.getCurrentCustomerProfile(KEYCLOAK_USER_ID);
+
+        assertThat(result).isEqualTo(profile);
+    }
+
+    @Test
+    @DisplayName("getCurrentCustomerProfile: no matching customer throws CustomerProfileNotFoundException")
+    void getCurrentCustomerProfile_noCustomer_throws() {
+        when(customerRepository.findByKeycloakUserId(KEYCLOAK_USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> customerService.getCurrentCustomerProfile(KEYCLOAK_USER_ID))
+                .isInstanceOf(CustomerProfileNotFoundException.class);
     }
 
     // ── M4.4: Admin Customer list query ──────────────────────────────────────

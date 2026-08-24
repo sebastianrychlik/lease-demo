@@ -36,8 +36,49 @@ else
     echo "Mode: LOCAL"
 fi
 
+# ---------------------------------------------------------------------------
+# Persistent local crypto keys
+# ---------------------------------------------------------------------------
+
+# Application-level field encryption keys (PESEL) are required at startup.
+# The local PostgreSQL database is persistent, so these keys must also remain
+# stable across backend restarts.
+#
+# .env.local is generated once, reused on subsequent runs and never committed
+# or printed.
+#
+# shellcheck source=lib/local-crypto-keys.sh
+source "$ROOT_DIR/scripts/lib/local-crypto-keys.sh"
+load_local_crypto_keys "$ROOT_DIR"
+
+# ---------------------------------------------------------------------------
+# Cleanup
+# ---------------------------------------------------------------------------
+
+cleanup() {
+    echo
+    echo "Stopping LeaseDemo local processes..."
+
+    if [ -n "${BACKEND_PID:-}" ]; then
+        kill "$BACKEND_PID" 2>/dev/null || true
+    fi
+
+    if [ -n "${FRONTEND_PID:-}" ]; then
+        kill "$FRONTEND_PID" 2>/dev/null || true
+    fi
+
+    echo "Angular and backend stopped."
+    echo "Keycloak container remains running."
+}
+
+trap cleanup EXIT INT TERM
+
+# ---------------------------------------------------------------------------
+# 1. Keycloak
+# ---------------------------------------------------------------------------
+
 echo
-echo "[1/3] Starting Keycloak..."
+echo "[1/4] Starting Keycloak..."
 
 if docker ps --format '{{.Names}}' | grep -qx "lease-demo-keycloak"; then
     echo "Keycloak is already running."
@@ -45,27 +86,42 @@ else
     docker start lease-demo-keycloak
 fi
 
-echo
-echo "[2/3] Starting Spring Boot..."
+# ---------------------------------------------------------------------------
+# 2. Angular/Vite local cache
+# ---------------------------------------------------------------------------
 
-# Application-level field encryption keys (PESEL) are required at startup.
-# The local PostgreSQL database is persistent, so these keys must also be
-# persistent across backend restarts (see scripts/lib/local-crypto-keys.sh
-# and .env.local — never committed, never printed).
-# shellcheck source=lib/local-crypto-keys.sh
-source "$ROOT_DIR/scripts/lib/local-crypto-keys.sh"
-load_local_crypto_keys "$ROOT_DIR"
+echo
+echo "[2/4] Preparing Angular development cache..."
+
+ANGULAR_CACHE_DIR="$ROOT_DIR/frontend/.angular/cache"
+
+if [ -d "$ANGULAR_CACHE_DIR" ]; then
+    echo "Removing stale Angular/Vite cache..."
+    rm -rf "$ANGULAR_CACHE_DIR"
+fi
+
+echo "Angular/Vite cache ready."
+
+# ---------------------------------------------------------------------------
+# 3. Spring Boot
+# ---------------------------------------------------------------------------
+
+echo
+echo "[3/4] Starting Spring Boot..."
 
 (
     cd "$ROOT_DIR/backend"
-
     mvn "${MAVEN_PROFILE_ARGS[@]}" spring-boot:run
 ) &
 
 BACKEND_PID=$!
 
+# ---------------------------------------------------------------------------
+# 4. Angular
+# ---------------------------------------------------------------------------
+
 echo
-echo "[3/3] Starting Angular..."
+echo "[4/4] Starting Angular..."
 
 (
     cd "$ROOT_DIR/frontend"
@@ -73,6 +129,10 @@ echo "[3/3] Starting Angular..."
 ) &
 
 FRONTEND_PID=$!
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
 
 echo
 echo "========================================"
@@ -95,18 +155,5 @@ fi
 
 echo
 echo "Press Ctrl+C to stop Angular and backend."
-
-cleanup() {
-    echo
-    echo "Stopping LeaseDemo local processes..."
-
-    kill "$BACKEND_PID" 2>/dev/null || true
-    kill "$FRONTEND_PID" 2>/dev/null || true
-
-    echo "Angular and backend stopped."
-    echo "Keycloak container remains running."
-}
-
-trap cleanup EXIT INT TERM
 
 wait

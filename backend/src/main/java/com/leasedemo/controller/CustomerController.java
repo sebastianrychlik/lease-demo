@@ -2,6 +2,7 @@ package com.leasedemo.controller;
 
 import com.leasedemo.dto.CustomerCreateRequest;
 import com.leasedemo.dto.CustomerListItemResponse;
+import com.leasedemo.dto.CustomerProfileResponse;
 import com.leasedemo.dto.CustomerResponse;
 import com.leasedemo.dto.PageResponse;
 import com.leasedemo.service.CustomerService;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,6 +65,32 @@ public class CustomerController {
         String keycloakUserId = jwt.getSubject();
         CustomerResponse response = customerService.createCustomer(keycloakUserId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(
+            summary = "Get the authenticated customer's own profile",
+            description = "Resolves the Customer domain profile owned by the authenticated JWT "
+                    + "subject (sub claim). The browser never supplies a customerId, "
+                    + "keycloakUserId, or email to select which profile is returned. "
+                    + "PESEL (raw, encrypted, or lookup hash) and keycloakUserId are never "
+                    + "included in the response. A 404 response means the authenticated "
+                    + "identity has not yet completed onboarding — it is an expected state, "
+                    + "not a server error.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Customer profile found"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid JWT"),
+            @ApiResponse(responseCode = "403", description = "Authenticated but not ROLE_CUSTOMER"),
+            @ApiResponse(responseCode = "404", description = "Authenticated identity has no "
+                    + "Customer profile yet — onboarding required")
+    })
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<CustomerProfileResponse> getCurrentCustomerProfile(@AuthenticationPrincipal Jwt jwt) {
+        // Trusted security context: identity is derived exclusively from the
+        // authenticated JWT subject, never from any client-supplied value.
+        String keycloakUserId = jwt.getSubject();
+        CustomerProfileResponse response = customerService.getCurrentCustomerProfile(keycloakUserId);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(
