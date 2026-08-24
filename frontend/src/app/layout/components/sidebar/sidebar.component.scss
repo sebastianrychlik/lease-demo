@@ -1,0 +1,45 @@
+@use '../../../../styles/tokens';
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0.75rem 0.5rem;
+}
+
+.app-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-sidebar__link {
+  display: block;
+  padding: 0.625rem 0.875rem;
+  border-radius: tokens.$ld-radius-sm;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 0.925rem;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+
+.app-sidebar__link:hover,
+.app-sidebar__link:focus-visible {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.app-sidebar__link--active {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.app-sidebar__separator {
+  margin: 0.75rem 0.875rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}

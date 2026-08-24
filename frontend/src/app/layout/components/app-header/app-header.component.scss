@@ -1,0 +1,44 @@
+@use '../../../../styles/tokens';
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 3.5rem;
+  background-color: tokens.$ld-color-primary;
+  color: tokens.$ld-color-text-on-primary;
+  flex-shrink: 0;
+}
+
+.app-header__brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.app-header__username {
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.app-header__logout {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: tokens.$ld-radius-sm;
+  color: tokens.$ld-color-text-on-primary;
+  cursor: pointer;
+  font-size: 0.825rem;
+  padding: 0.3rem 0.85rem;
+}
+
+.app-header__logout:hover {
+  background: rgba(255, 255, 255, 0.12);
+}

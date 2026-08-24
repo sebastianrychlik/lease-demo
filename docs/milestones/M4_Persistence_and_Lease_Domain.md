@@ -10,13 +10,13 @@ document. Sections are explicitly marked as **IMPLEMENTED** or
 **PLANNED / FUTURE ARCHITECTURE** — never assume a "PLANNED" section
 already exists in code.
 
-Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, M4.1.3, and M4.2**
-(persistence foundation, the initial `Customer` domain, OpenAPI/Swagger UI
-documentation, JWT-bound customer identity, a local-only mock Customer
-data seeder, and the frontend design-system foundation).
+Current implemented scope: **M4.0, M4.1, M4.1.1, M4.1.2, M4.1.3, M4.2, and
+M4.3** (persistence foundation, the initial `Customer` domain, OpenAPI/
+Swagger UI documentation, JWT-bound customer identity, a local-only mock
+Customer data seeder, the frontend design-system foundation, and the
+role-aware Angular Admin/Customer application shell).
 
-Future planned scope: the `LeaseApplication` domain and role-aware
-Admin/Customer application shells, beyond M4.2.
+Future planned scope: the `LeaseApplication` domain, beyond M4.3.
 
 ---
 
@@ -458,10 +458,14 @@ documented in §2–§3.
 |----------------|-------|--------|
 | M4.0 | PostgreSQL Persistence Foundation | **IMPLEMENTED** |
 | M4.1 | Customer Domain | **IMPLEMENTED** |
-| M4.2 | LeaseApplication Domain | PLANNED |
+| M4.2 | Frontend Design System Foundation | **IMPLEMENTED** |
+| M4.3 | Role-Aware Angular Application Shell | **IMPLEMENTED** |
 
-No implementation details beyond high-level intent are asserted for
-M4.2 here; it will be documented in this same file as it is built.
+(Note: this table originally listed M4.2 as "LeaseApplication Domain"
+before that scope was actually built; M4.2 was instead used for the
+frontend design-system foundation, and M4.3 for the role-aware
+Admin/Customer shell — see their dedicated sections below. The
+`LeaseApplication` domain remains future planned scope.)
 
 ---
 
@@ -2390,5 +2394,327 @@ demonstrating the real, working components.
 A: `shared/ui` **implements** reusable controls. `/ux-demo` **consumes**
 and demonstrates them — it is a consumer of the design system, never a
 second design system.
+
+---
+
+## M4.3 — Role-Aware Angular Application Shell — IMPLEMENTED
+
+### 1. Objective
+
+M4.3 builds the permanent role-aware LeaseDemo application shell on top of
+M4.2's design system. After successful Keycloak authentication, Angular
+determines the user's LeaseDemo application role and routes/renders the
+appropriate area — the user never manually chooses between Admin and
+Customer.
+
+```
+Keycloak → authenticated → JWT → Angular auth state → role resolution
+                                                          |
+                                              +-----------+-----------+
+                                              |                       |
+                                            ADMIN                 CUSTOMER
+                                              |                       |
+                                         AdminLayout            CustomerLayout
+```
+
+**Permanent security principle** (unchanged from before, reaffirmed here):
+Angular role guards are UX/navigation controls, not the authoritative
+security boundary. Spring Security (JWT `ROLE_*` authorization on
+`/api/**`) remains the sole trust boundary for backend data and operations.
+Hiding an Admin menu item does not, by itself, secure any backend endpoint.
+
+### 2. Existing Auth Architecture Reused
+
+M4.3 did not introduce a second authentication abstraction. It builds
+directly on the existing, working pieces:
+
+| Existing piece | File | Reused as |
+|---|---|---|
+| Keycloak adapter bootstrap | `core/auth/keycloak.factory.ts` | Unchanged |
+| `AuthService` | `core/services/auth.service.ts` | Unchanged — still the only place that touches the Keycloak adapter and `keycloak.tokenParsed`; already exposed `roles()` as a signal |
+| `authGuard` | `core/guards/auth.guard.ts` | Unchanged — still the first guard on every protected route |
+
+No JWT is manually decoded anywhere in M4.3 — `AuthService.roles()` (already
+populated from `keycloak.tokenParsed['realm_access'].roles` in M4.1-era
+code) is the only role source consulted.
+
+### 3. Actual Keycloak Role Names
+
+Inspected directly from `infrastructure/keycloak/lease-demo-realm.json`
+(untouched by this milestone): the realm defines exactly three
+non-default roles — `ADMIN`, `CUSTOMER`, `ADVISOR` — plus Keycloak's own
+`default-roles-lease-demo` composite (`offline_access`,
+`uma_authorization`). `ADVISOR` has no corresponding application area in
+this milestone.
+
+### 4. Application-Level Role Representation
+
+`core/auth/models/app-role.model.ts`:
+
+```ts
+export enum AppRole { Admin = 'ADMIN', Customer = 'CUSTOMER' }
+
+export function mapKeycloakRolesToAppRoles(
+  keycloakRoles: readonly string[]
+): AppRole[]
+```
+
+This is the **single, centralized** place that compares against raw
+Keycloak role strings. `ADVISOR`/`offline_access`/`uma_authorization` are
+silently ignored (contribute no `AppRole`) — no other file performs
+`roles.includes('ADMIN')`-style checks.
+
+### 5. Centralized Role Resolution
+
+`core/auth/services/role.service.ts` (`RoleService`, `providedIn: 'root'`)
+exposes:
+
+- `appRoles` — computed signal, `AppRole[]` from `AuthService.roles()`.
+- `isAdmin` / `isCustomer` — computed boolean signals.
+- `hasNoRecognizedRole` — computed boolean signal (fail-closed detector).
+- `resolveLandingRoute(): string | null` — `/admin/dashboard`,
+  `/customer/dashboard`, or `null` (no recognized role).
+
+Every guard/layout consults `RoleService` — none independently parses
+tokens or `AuthService.roles()`.
+
+### 6. Multi-Role Precedence (documented rule)
+
+**A user with BOTH `ADMIN` and `CUSTOMER` lands in the Admin area by
+default (`ADMIN` wins).** This is a deliberate, deterministic demo-scope
+rule — no role-switcher UI exists or is planned in this milestone. It only
+governs the *default landing route*; it does not by itself grant or deny
+access to `/customer/**` (see § 8).
+
+### 7. Unknown-Role (Fail-Closed) Behavior
+
+An authenticated user whose Keycloak roles map to no `AppRole` (e.g.
+`ADVISOR`-only) is granted **neither** Admin nor Customer access.
+`RoleService.resolveLandingRoute()` returns `null`, and every guard that
+would otherwise need a role match instead redirects to `/access-denied`.
+No silent fallback to either area is possible.
+
+### 8. Route Structure
+
+```
+/                → rootRedirectGuard → /admin/dashboard | /customer/dashboard | /access-denied
+/admin/**        → AdminLayout    (adminAreaGuard: requires ADMIN)
+  /admin/dashboard
+  /admin/customers   (placeholder)
+  /admin/leases      (placeholder)
+/customer/**     → CustomerLayout (customerAreaGuard: requires CUSTOMER)
+  /customer/dashboard
+  /customer/leases    (placeholder)
+  /customer/documents (placeholder)
+  /customer/profile   (placeholder)
+/ux-demo         → adminAreaGuard (ADMIN-only; URL preserved, not nested under /admin)
+/access-denied   → authGuard only (any authenticated user)
+/exchange-rates  → authGuard only (unchanged from earlier milestones)
+**               → NotFoundComponent (unprotected, unchanged)
+```
+
+All feature routes remain lazily loaded (`loadChildren`/`loadComponent`).
+
+**Customer-area policy** (deliberately strict, per instruction): the
+Customer area requires the `CUSTOMER` role outright. An ADMIN who also
+holds `CUSTOMER` is naturally allowed into `/customer/**`; an ADMIN-only
+user is denied and redirected to `/access-denied`.
+
+### 9. Root Redirect Behavior
+
+`core/auth/guards/root-redirect.guard.ts` (`rootRedirectGuard`) runs on `/`
+after `authGuard` guarantees an authenticated session, and always issues a
+`UrlTree` redirect (`router.parseUrl(...)`) to one of `/admin/dashboard`,
+`/customer/dashboard`, or `/access-denied` — never `true`. No redirect loop
+is possible because none of those three destinations depends on
+`rootRedirectGuard` again.
+
+### 10. Guards Created
+
+`core/auth/guards/role.guard.ts`:
+
+- `adminAreaGuard` — allows navigation only when `RoleService.isAdmin()`;
+  otherwise redirects to `/access-denied`.
+- `customerAreaGuard` — allows navigation only when
+  `RoleService.isCustomer()`; otherwise redirects to `/access-denied`.
+
+Both guards assume `authGuard` already ran on the same route array
+(`canActivate: [authGuard, adminAreaGuard]`, etc.) and only add the role
+check on top — they do not duplicate authentication logic.
+
+### 11. AdminLayout
+
+`layout/admin-layout/admin-layout.component.{ts,html,scss}`:
+
+- Composes `AppHeaderComponent` + `SidebarComponent` + `<router-outlet>`.
+- Navigation: **Dashboard, Customers, Leases**, then a visually separated
+  secondary group: **UX Demo**.
+- Standalone, `ChangeDetectionStrategy.OnPush`.
+
+### 12. CustomerLayout
+
+`layout/customer-layout/customer-layout.component.{ts,html,scss}`:
+
+- Same header/sidebar/`router-outlet` composition as AdminLayout (same
+  design tokens, same `.app-shell`/`.app-shell__sidebar`/
+  `.app-shell__content` structure) — the two shells visibly belong to one
+  product.
+- Navigation: **Dashboard, My leases, Documents, My profile**. No UX Demo,
+  no Customers, no other Admin-facing item.
+
+### 13. Shared Shell Components
+
+`layout/components/`:
+
+- `app-header/` (`AppHeaderComponent`) — LeaseDemo brand, authenticated
+  username (`AuthService.username()`), Logout button delegating to the
+  existing `AuthService.logout()` (full Keycloak session termination — not
+  reimplemented). No raw JWT/token data is rendered.
+- `sidebar/` (`SidebarComponent`) — renders a typed `NavigationItem[]`
+  (`layout/models/navigation-item.model.ts`: `{ label, route, icon? }`)
+  plus an optional visually-separated `secondaryItems` group. Active route
+  indicated via `routerLinkActive`. AdminLayout and CustomerLayout each own
+  their own navigation arrays and pass different data into this same
+  component — no per-item role logic lives inside the sidebar itself.
+
+These are **layout-level** components (not `shared/ui`) per the milestone
+guidance that sidebar/header normally belong to `layout/`, not `shared/ui`
+— so no new UX Demo catalog entry was added for them.
+
+### 14. UX Demo Authorization Policy
+
+`/ux-demo` is now guarded by `adminAreaGuard` (previously only `authGuard`).
+The URL is preserved exactly (`path: 'ux-demo'`, not nested under
+`/admin/ux-demo`), avoiding a route duplication while satisfying: ADMIN can
+reach `/ux-demo`; CUSTOMER is redirected to `/access-denied`. AdminLayout's
+secondary navigation group links to it directly.
+
+### 15. Admin Dashboard / Customer Dashboard
+
+`features/admin/dashboard/admin-dashboard-page.component.{ts,html}` and
+`features/customer/dashboard/customer-dashboard-page.component.{ts,html}`:
+static shell-validation pages composed entirely from `shared/ui`
+(`app-page-header`, `app-card`) plus Tailwind utility classes for the card
+grid. No backend calls, no charts, no fabricated metrics — exactly the
+copy specified in the milestone brief ("Administration — Manage customers,
+leases and operational data." / "Welcome — View your leases, documents and
+account information.").
+
+### 16. Placeholder Feature Pages
+
+`shared/components/feature-placeholder/feature-placeholder.component.ts`
+— one small, reusable placeholder (`app-page-header` + `app-card`, a
+`title` input bound from route `data.title` via the existing
+`withComponentInputBinding()` router feature) used by `/admin/customers`,
+`/admin/leases`, `/customer/leases`, `/customer/documents`, and
+`/customer/profile`. No CRUD, forms, or tables were added anywhere.
+
+### 17. Access Denied Page
+
+`features/access-denied/access-denied-page.component.{ts,html}` — built
+from `shared/ui` (`app-page-header`, `app-card`, `app-button`). Explains,
+in plain language, that the account does not have access to the requested
+area, and offers a Logout action delegating to the existing
+`AuthService.logout()`. No internal authorization detail or JWT claim is
+rendered.
+
+### 18. Responsive Behavior
+
+`.app-shell__sidebar` collapses from `15rem` to `3.75rem` at `max-width:
+900px`, and `.app-shell__content` padding reduces at `max-width: 600px`.
+Desktop/laptop remains the primary target; this establishes the minimum
+sensible narrower-screen behavior requested (sidebar does not permanently
+consume excessive width; content padding still fits; header remains a
+fixed, always-visible bar). Full mobile-specific UX (e.g. an off-canvas
+Material `mat-drawer`) remains future work, as scoped.
+
+### 19. Root `AppComponent` Change
+
+`AppComponent`'s pre-existing minimal Login/Logout status bar is now shown
+**only** for routes outside `/admin/**` and `/customer/**`
+(`isInsideApplicationShell` signal, updated on `Router` `NavigationEnd`),
+since those two areas render their own `AppHeaderComponent` via
+AdminLayout/CustomerLayout. This avoids stacking two headers; it does not
+change authentication behavior.
+
+### 20. shared/ui / Design-System Reuse
+
+No new `shared/ui` component was introduced in this milestone — every new
+page (dashboards, placeholders, access-denied) composes the existing
+`app-page-header`/`app-card`/`app-button` controls from M4.2, and every new
+SCSS file `@use`s the same `styles/tokens` source of truth as the rest of
+the application. No second visual language, no duplicated token palette.
+
+### 21. Tests Added
+
+| File | Coverage |
+|---|---|
+| `core/auth/models/app-role.model.spec.ts` | Keycloak → AppRole mapping, including ADVISOR/offline_access being ignored |
+| `core/auth/services/role.service.spec.ts` | ADMIN → Admin area, CUSTOMER → Customer area, ADMIN-wins precedence, fail-closed (unrecognized role and no roles) |
+| `core/auth/guards/role.guard.spec.ts` | `adminAreaGuard` allows ADMIN/denies CUSTOMER-only; `customerAreaGuard` allows CUSTOMER/denies ADMIN-only/allows ADMIN+CUSTOMER |
+| `app.routes.spec.ts` | `/admin`, `/customer`, `/ux-demo` are wired to the correct guard function (route-config-level check, no Router exercised) |
+| `layout/admin-layout/admin-layout.component.spec.ts` | Admin navigation renders, UX Demo renders, Customer-only labels absent |
+| `layout/customer-layout/customer-layout.component.spec.ts` | Customer navigation renders, UX Demo absent, Admin "Customers" absent |
+| `layout/components/app-header/app-header.component.spec.ts` | Username renders, brand renders, Logout delegates to `AuthService.logout()` |
+
+Per instruction, no test exercises Angular Router or Material internals.
+
+### 22. Validation Performed
+
+- `npm run build` — succeeded, no errors.
+- `npm run build:prod` — succeeded, no errors. Initial bundle: **395.13 kB
+  raw / 101.95 kB estimated transfer**, comfortably under the existing
+  `500kB` warning / `1MB` error initial budget (unchanged from M4.2 —
+  `angular.json` budgets were not modified). New feature/route lazy chunks
+  are all small (largest new one: `admin-routes`/`customer-routes` at
+  ~2.8 kB raw each; `admin-dashboard-page-component`/
+  `customer-dashboard-page-component` ~1.2 kB raw each).
+- `npm run test:ci` — **72/72 tests passing** (45 pre-existing + 27 new).
+- `npm run lint` — still fails with `Could not find the
+  '@angular-eslint/builder:lint' builder's node package`. This is the same
+  **pre-existing** condition reported in M4.2 (no ESLint packages present
+  in `package.json`) and was not introduced or repaired by M4.3.
+- Manual verification: performed against the project's existing single
+  test identity available without Keycloak realm modification (per
+  instruction not to create Keycloak users merely for testing). The
+  ADMIN-vs-CUSTOMER-vs-unknown-role matrix beyond that single account is
+  covered by the unit tests in § 21 (mocked `RoleService`/`AuthService`
+  states), which exercise every branch (ADMIN, CUSTOMER, ADMIN+CUSTOMER,
+  unrecognized role, no roles) that a live second account would otherwise
+  demonstrate.
+
+### 23. Explicit Non-Goals (deferred)
+
+- Backend, Spring Security authorization rules, Flyway, and Keycloak
+  realm/client configuration — **untouched**.
+- Any Customer query API, Customer table/list/pagination UI, real lease or
+  document data — **NOT implemented**.
+- A role-switcher UI — **intentionally not built** (§ 6 explains why).
+- Full mobile/phone-specific navigation (off-canvas drawer) — **deferred**;
+  only the minimum tablet-width sidebar-collapse behavior was implemented.
+- Repairing the pre-existing `ng lint` infrastructure gap — **out of
+  scope**, reported as-is.
+
+### 24. Interview-Ready Notes
+
+**Q: Why have role guards if backend authorization is authoritative?**
+A: Frontend guards provide correct navigation and UX, while backend
+security remains the actual trust boundary protecting data and operations.
+
+**Q: Why centralize role mapping?**
+A: It prevents Keycloak-specific role strings from leaking throughout the
+UI and provides one deterministic application-level interpretation.
+
+**Q: What happens when a user has no recognized role?**
+A: The application fails closed and displays Access Denied rather than
+defaulting to a more privileged or arbitrary area.
+
+**Q: Why separate AdminLayout and CustomerLayout?**
+A: The two user types have different navigation and workflows while still
+sharing one product design system and reusable shell primitives.
+
+**Q: Why does ADMIN win when both roles exist?**
+A: It provides deterministic default navigation for the demo without
+introducing unnecessary role-switching complexity.
 
 
