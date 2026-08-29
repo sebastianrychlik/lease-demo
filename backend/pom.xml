@@ -240,6 +240,101 @@
             </build>
         </profile>
 
-    </profiles>
+        <profile>
+            <id>local-db-migrate</id>
+            <properties>
+                <leasedemo.db.username>leasedemo</leasedemo.db.username>
+                <leasedemo.db.password>leasedemo</leasedemo.db.password>
 
+                <leasedemo.db.pl.url>
+                    jdbc:postgresql://localhost:5433/lease_demo
+                </leasedemo.db.pl.url>
+
+                <leasedemo.db.de.url>
+                    jdbc:postgresql://localhost:5434/lease_demo
+                </leasedemo.db.de.url>
+            </properties>
+
+            <build>
+                <plugins>
+
+                    <plugin>
+                        <groupId>org.flywaydb</groupId>
+                        <artifactId>flyway-maven-plugin</artifactId>
+                        <version>${flyway.version}</version>
+
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.flywaydb</groupId>
+                                <artifactId>flyway-database-postgresql</artifactId>
+                                <version>${flyway.version}</version>
+                            </dependency>
+
+                            <dependency>
+                                <groupId>org.postgresql</groupId>
+                                <artifactId>postgresql</artifactId>
+                                <version>${postgresql.version}</version>
+                            </dependency>
+                        </dependencies>
+
+                        <executions>
+
+                            <!-- ================================================== -->
+                            <!-- PostgreSQL PL                                     -->
+                            <!-- ================================================== -->
+                            <execution>
+                                <id>migrate-postgres-pl</id>
+                                <phase>initialize</phase>
+
+                                <goals>
+                                    <goal>migrate</goal>
+                                </goals>
+
+                                <configuration>
+                                    <url>${leasedemo.db.pl.url}</url>
+                                    <user>${leasedemo.db.username}</user>
+                                    <password>${leasedemo.db.password}</password>
+
+                                    <locations>
+                                        <location>
+                                            filesystem:${project.basedir}/src/main/resources/db/migration
+                                        </location>
+                                    </locations>
+
+                                    <validateMigrationNaming>true</validateMigrationNaming>
+                                </configuration>
+                            </execution>
+
+                            <!-- ================================================== -->
+                            <!-- PostgreSQL DE                                     -->
+                            <!-- ================================================== -->
+                            <execution>
+                                <id>migrate-postgres-de</id>
+                                <phase>initialize</phase>
+
+                                <goals>
+                                    <goal>migrate</goal>
+                                </goals>
+
+                                <configuration>
+                                    <url>${leasedemo.db.de.url}</url>
+                                    <user>${leasedemo.db.username}</user>
+                                    <password>${leasedemo.db.password}</password>
+
+                                    <locations>
+                                        <location>
+                                            filesystem:${project.basedir}/src/main/resources/db/migration
+                                        </location>
+                                    </locations>
+
+                                    <validateMigrationNaming>true</validateMigrationNaming>
+                                </configuration>
+                            </execution>
+
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

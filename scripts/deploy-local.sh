@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -29,6 +29,7 @@ esac
 echo "========================================"
 echo " LeaseDemo — Local Environment"
 echo "========================================"
+echo
 
 if [ "${1:-}" = "--local-seed" ]; then
     echo "Mode: LOCAL + seed tooling"
@@ -57,7 +58,7 @@ load_local_crypto_keys "$ROOT_DIR"
 
 cleanup() {
     echo
-    echo "Stopping LeaseDemo local processes..."
+    echo "Stopping LeaseDemo local application processes..."
 
     if [ -n "${BACKEND_PID:-}" ]; then
         kill "$BACKEND_PID" 2>/dev/null || true
@@ -67,31 +68,50 @@ cleanup() {
         kill "$FRONTEND_PID" 2>/dev/null || true
     fi
 
-    echo "Angular and backend stopped."
-    echo "Keycloak container remains running."
+    echo "Angular and Spring Boot stopped."
+    echo "Docker infrastructure remains running."
 }
 
 trap cleanup EXIT INT TERM
 
 # ---------------------------------------------------------------------------
-# 1. Keycloak
+# 1. Docker infrastructure
 # ---------------------------------------------------------------------------
 
 echo
-echo "[1/4] Starting Keycloak..."
+echo "[1/6] Starting Docker infrastructure..."
 
-if docker ps --format '{{.Names}}' | grep -qx "lease-demo-keycloak"; then
-    echo "Keycloak is already running."
-else
-    docker start lease-demo-keycloak
-fi
+"$ROOT_DIR/scripts/infrastructure-start.sh"
 
 # ---------------------------------------------------------------------------
-# 2. Angular/Vite local cache
+# 2. Database migrations (by FlyWay)
 # ---------------------------------------------------------------------------
 
 echo
-echo "[2/4] Preparing Angular development cache..."
+echo "[2/6] Migrating PostgreSQL PL + DE..."
+
+"$ROOT_DIR/scripts/database-migrate.sh"
+
+echo "Database schemas are up to date."
+
+# ---------------------------------------------------------------------------
+# 3. Spock replication configuration (list of tables to be replicated)
+# ---------------------------------------------------------------------------
+
+echo
+echo "[3/6] Configuring Spock replication..."
+
+"$ROOT_DIR/scripts/spock-configure.sh"
+
+echo "Spock replication configuration is up to date."
+
+
+# ---------------------------------------------------------------------------
+# 4. Angular/Vite local cache
+# ---------------------------------------------------------------------------
+
+echo
+echo "[4/6] Preparing Angular development cache..."
 
 ANGULAR_CACHE_DIR="$ROOT_DIR/frontend/.angular/cache"
 
@@ -103,11 +123,11 @@ fi
 echo "Angular/Vite cache ready."
 
 # ---------------------------------------------------------------------------
-# 3. Spring Boot
+# 5. Spring Boot
 # ---------------------------------------------------------------------------
 
 echo
-echo "[3/4] Starting Spring Boot..."
+echo "[5/6] Starting Spring Boot..."
 
 (
     cd "$ROOT_DIR/backend"
@@ -117,11 +137,11 @@ echo "[3/4] Starting Spring Boot..."
 BACKEND_PID=$!
 
 # ---------------------------------------------------------------------------
-# 4. Angular
+# 5. Angular
 # ---------------------------------------------------------------------------
 
 echo
-echo "[4/4] Starting Angular..."
+echo "[6/6] Starting Angular..."
 
 (
     cd "$ROOT_DIR/frontend"
@@ -139,10 +159,13 @@ echo "========================================"
 echo " LeaseDemo is starting"
 echo "========================================"
 echo
-echo "Angular:     http://localhost:4200"
-echo "Backend:     http://localhost:8080"
-echo "Swagger:     http://localhost:8080/swagger-ui/index.html"
-echo "Keycloak:    http://localhost:8081"
+echo "Angular:       http://localhost:4200"
+echo "Backend:       http://localhost:8080"
+echo "Swagger:       http://localhost:8080/swagger-ui/index.html"
+echo "Keycloak:      http://localhost:8081"
+echo "Kafka UI:      http://localhost:8090"
+echo "Mailpit:       http://localhost:8025"
+echo "Elasticsearch: http://localhost:9200"
 
 if [ "${1:-}" = "--local-seed" ]; then
     echo
@@ -154,6 +177,7 @@ else
 fi
 
 echo
-echo "Press Ctrl+C to stop Angular and backend."
+echo "Press Ctrl+C to stop Angular and Spring Boot."
+echo "Docker infrastructure will remain running."
 
 wait
