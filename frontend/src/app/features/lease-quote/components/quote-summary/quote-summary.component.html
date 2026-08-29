@@ -17,41 +17,47 @@
   <div class="quote-summary">
     <p class="quote-summary__headline">{{ 'leaseQuote.summary.monthlyPayment' | transloco }}</p>
     <p class="quote-summary__monthly">
-      {{ quote.monthlyPaymentPln | number: '1.2-2' }} PLN
+      {{ quote.monthlyPaymentPln | ldCurrency: 'PLN' : locale() }}
     </p>
 
     <dl class="quote-summary__grid">
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.exchangeRate' | transloco: { currency: quote.currency } }}</dt>
-        <dd>{{ quote.exchangeRate | number: '1.2-4' }}</dd>
+        <dd>{{ quote.exchangeRate | ldNumber: locale() : '1.2-4' }}</dd>
       </div>
+      @if (quote.exchangeRateDate) {
+        <div class="quote-summary__row">
+          <dt>{{ 'leaseQuote.summary.exchangeRateDate' | transloco }}</dt>
+          <dd>{{ quote.exchangeRateDate | ldDate: locale() }}</dd>
+        </div>
+      }
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.vehicleValue' | transloco }}</dt>
-        <dd>{{ quote.vehiclePricePln | number: '1.2-2' }} PLN</dd>
+        <dd>{{ quote.vehiclePricePln | ldCurrency: 'PLN' : locale() }}</dd>
       </div>
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.financedAmount' | transloco }}</dt>
-        <dd>{{ quote.financedAmountPln | number: '1.2-2' }} PLN</dd>
+        <dd>{{ quote.financedAmountPln | ldCurrency: 'PLN' : locale() }}</dd>
       </div>
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.initialPayment' | transloco }}</dt>
-        <dd>{{ quote.initialPaymentPln | number: '1.2-2' }} PLN</dd>
+        <dd>{{ quote.initialPaymentPln | ldCurrency: 'PLN' : locale() }}</dd>
       </div>
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.buyout' | transloco }}</dt>
-        <dd>{{ quote.buyoutPln | number: '1.2-2' }} PLN</dd>
+        <dd>{{ quote.buyoutPln | ldCurrency: 'PLN' : locale() }}</dd>
       </div>
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.total' | transloco }}</dt>
-        <dd>{{ quote.totalLeaseCostPln | number: '1.2-2' }} PLN</dd>
+        <dd>{{ quote.totalLeaseCostPln | ldCurrency: 'PLN' : locale() }}</dd>
       </div>
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.vat' | transloco }}</dt>
-        <dd>{{ quote.estimatedVatPln | number: '1.2-2' }} PLN</dd>
+        <dd>{{ quote.estimatedVatPln | ldCurrency: 'PLN' : locale() }}</dd>
       </div>
       <div class="quote-summary__row">
         <dt>{{ 'leaseQuote.summary.apr' | transloco }}</dt>
-        <dd>{{ quote.annualRatePercent | number: '1.2-2' }}%</dd>
+        <dd>{{ quote.annualRatePercent | ldPercent: locale() }}</dd>
       </div>
     </dl>
 

@@ -2,6 +2,8 @@ import { APP_INITIALIZER, ApplicationConfig, provideZoneChangeDetection } from '
 import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { registerLocaleData } from '@angular/common';
+import localePl from '@angular/common/locales/pl';
 import { provideTransloco } from '@jsverse/transloco';
 
 import { APP_ROUTES } from './app.routes';
@@ -14,6 +16,11 @@ import { TranslocoHttpLoader } from './core/i18n/transloco-http-loader';
 import { LanguageService } from './core/i18n/language.service';
 import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, FALLBACK_LANGUAGE } from './core/i18n/language.model';
 import { environment } from '../environments/environment';
+
+// en-US locale data ships with Angular by default; pl-PL must be registered
+// explicitly (M5.1.3.1) so `ldCurrency`/`ldNumber`/`ldPercent`/`ldDate` and
+// Angular's native pipes can format numbers/currency/dates for Polish.
+registerLocaleData(localePl, 'pl-PL');
 
 /** Resolves the persisted/default UI language before the app renders (M5.1.3). */
 function languageInitializerFactory(languageService: LanguageService): () => void {

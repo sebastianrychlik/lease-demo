@@ -1,10 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Signal, computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 
 import {
   AppLanguage,
   AVAILABLE_LANGUAGES,
   DEFAULT_LANGUAGE,
+  LANGUAGE_LOCALE,
   LANGUAGE_STORAGE_KEY,
 } from './language.model';
 
@@ -18,6 +19,18 @@ import {
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
   private readonly translocoService = inject(TranslocoService);
+
+  /**
+   * Reactive locale for Angular's native number/currency/percent/date
+   * formatters, DERIVED from the active Transloco language (M5.1.3.1).
+   *
+   * Transloco's `activeLang` is already a signal, so this locale updates
+   * immediately (no reload) whenever `setLanguage`/`init` changes the active
+   * language — there is no independent locale state to drift out of sync.
+   */
+  readonly locale: Signal<string> = computed(
+    () => LANGUAGE_LOCALE[this.translocoService.activeLang() as AppLanguage],
+  );
 
   /** Reads the persisted language (if any/valid) and activates it in Transloco. */
   init(): void {

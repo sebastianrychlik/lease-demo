@@ -18,6 +18,7 @@ import {
   tap,
 } from 'rxjs';
 
+import { LanguageService } from '../../../core/i18n/language.service';
 import { CardComponent, PageHeaderComponent } from '../../../shared/ui';
 import { LeaseParametersComponent } from '../components/lease-parameters/lease-parameters.component';
 import { QuoteSummaryComponent, QuoteSummaryViewState } from '../components/quote-summary/quote-summary.component';
@@ -85,6 +86,10 @@ export class LeaseQuotePageComponent {
   private readonly leaseProductService = inject(LeaseProductService);
   private readonly leaseQuoteService = inject(LeaseQuoteService);
   private readonly translocoService = inject(TranslocoService);
+  private readonly languageService = inject(LanguageService);
+
+  /** Active Angular formatting locale, passed down to `QuoteSummaryComponent` (M5.1.3.1). */
+  readonly locale = this.languageService.locale;
 
   /**
    * Form is constructed eagerly with placeholder values; every value is
