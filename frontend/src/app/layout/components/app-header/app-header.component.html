@@ -2,11 +2,12 @@
   <span class="app-header__brand">LeaseDemo</span>
 
   <div class="app-header__user">
+    <app-language-switcher />
     @if (authService.username()) {
       <span class="app-header__username">{{ authService.username() }}</span>
     }
     <button class="app-header__logout" type="button" (click)="authService.logout()">
-      Logout
+      {{ 'common.logout' | transloco }}
     </button>
   </div>
 </header>

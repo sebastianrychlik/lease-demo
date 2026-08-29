@@ -1,0 +1,30 @@
+@use '../../../../styles/tokens';
+
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.language-switcher__option {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: tokens.$ld-radius-sm;
+  color: tokens.$ld-color-text-on-primary;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.3rem 0.55rem;
+  opacity: 0.75;
+}
+
+.language-switcher__option:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
+.language-switcher__option--active {
+  background: rgba(255, 255, 255, 0.22);
+  opacity: 1;
+}

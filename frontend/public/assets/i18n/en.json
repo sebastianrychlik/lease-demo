@@ -1,0 +1,91 @@
+{
+  "common": {
+    "logout": "Logout",
+    "loading": "Loading…",
+    "myProfile": "My profile"
+  },
+  "language": {
+    "label": "Language",
+    "pl": "PL",
+    "en": "EN"
+  },
+  "customer": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "leaseQuote": "Lease Quote Simulator",
+      "myLeases": "My leases",
+      "documents": "Documents",
+      "myProfile": "My profile"
+    },
+    "dashboard": {
+      "title": "Welcome",
+      "welcomeWithName": "Welcome, {{name}}. View your leases, documents and account information.",
+      "welcomeGeneric": "View your leases, documents and account information.",
+      "myLeases": "My leases",
+      "myLeasesDescription": "View the status of your active leases.",
+      "documents": "Documents",
+      "documentsDescription": "Access documents related to your account.",
+      "myProfile": "My profile",
+      "myProfileDescription": "Review your account information."
+    }
+  },
+  "admin": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "customers": "Customers",
+      "leases": "Leases",
+      "uxDemo": "UX Demo"
+    },
+    "dashboard": {
+      "title": "Administration",
+      "subtitle": "Manage customers, leases and operational data.",
+      "customers": "Customers",
+      "customersDescription": "Manage customer records and identity data.",
+      "leases": "Leases",
+      "leasesDescription": "Review and manage lease applications.",
+      "uxDemo": "UX Demo",
+      "uxDemoDescription": "Living design-system catalog for developers."
+    }
+  },
+  "leaseQuote": {
+    "title": "Lease Quote Simulator",
+    "subtitle": "Vehicle financing demo — live estimate, updates as you type",
+    "status": {
+      "loading": "Loading leasing products…",
+      "empty": "No leasing products are currently available.",
+      "error": "Leasing product configuration is currently unavailable. Please try again shortly."
+    },
+    "fields": {
+      "vehiclePrice": "Vehicle price",
+      "currency": "Currency",
+      "initialPayment": "Initial payment",
+      "leaseTerm": "Lease term",
+      "buyout": "Buyout",
+      "leaseType": "Lease type"
+    },
+    "leaseType": {
+      "operating": "Operating lease",
+      "financial": "Financial lease"
+    },
+    "summary": {
+      "calculating": "Calculating your quote…",
+      "errorTitle": "Unable to calculate a quote right now.",
+      "monthlyPayment": "Estimated monthly payment",
+      "exchangeRate": "NBP {{currency}}/PLN",
+      "vehicleValue": "Vehicle value",
+      "financedAmount": "Financed amount",
+      "initialPayment": "Initial payment",
+      "buyout": "Buyout",
+      "total": "Estimated total",
+      "vat": "Estimated VAT",
+      "apr": "Demo APR",
+      "disclaimer": "Estimate only — not a binding financing offer."
+    },
+    "errors": {
+      "nbpUnavailable": "The NBP exchange rate service is currently unavailable. Please try again shortly.",
+      "invalidParameters": "Some of the lease parameters are invalid.",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "generic": "Something went wrong while calculating your quote. Please try again later."
+    }
+  }
+}

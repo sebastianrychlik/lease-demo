@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { TranslocoModule } from '@jsverse/transloco';
 
 import { LeaseQuoteResponse } from '../../models/lease-quote.model';
 
@@ -19,7 +20,7 @@ export type QuoteSummaryViewState =
 @Component({
   selector: 'app-quote-summary',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslocoModule],
   templateUrl: './quote-summary.component.html',
   styleUrl: './quote-summary.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

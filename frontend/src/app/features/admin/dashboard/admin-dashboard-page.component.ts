@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { TranslocoModule } from '@jsverse/transloco';
 
 import { CardComponent, PageHeaderComponent } from '../../../shared/ui';
 
@@ -10,7 +11,7 @@ import { CardComponent, PageHeaderComponent } from '../../../shared/ui';
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [PageHeaderComponent, CardComponent],
+  imports: [PageHeaderComponent, CardComponent, TranslocoModule],
   templateUrl: './admin-dashboard-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

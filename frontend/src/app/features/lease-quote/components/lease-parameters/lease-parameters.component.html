@@ -1,12 +1,12 @@
 <form class="lease-parameters" [formGroup]="formGroup()">
   <div class="lease-parameters__row">
     <mat-form-field appearance="outline" class="lease-parameters__price">
-      <mat-label>Vehicle price</mat-label>
+      <mat-label>{{ 'leaseQuote.fields.vehiclePrice' | transloco }}</mat-label>
       <input matInput type="number" min="1" step="1000" formControlName="vehiclePrice" />
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="lease-parameters__currency">
-      <mat-label>Currency</mat-label>
+      <mat-label>{{ 'leaseQuote.fields.currency' | transloco }}</mat-label>
       <mat-select formControlName="currency">
         @for (currency of product().currencies; track currency) {
           <mat-option [value]="currency">{{ currency }}</mat-option>
@@ -17,7 +17,7 @@
 
   <div class="lease-parameters__section">
     <h3 class="lease-parameters__label">
-      Initial payment
+      {{ 'leaseQuote.fields.initialPayment' | transloco }}
       <span class="lease-parameters__value">{{ formGroup().controls.initialPaymentPercent.value }}%</span>
     </h3>
     <mat-slider
@@ -32,7 +32,7 @@
   </div>
 
   <div class="lease-parameters__section">
-    <h3 class="lease-parameters__label">Lease term</h3>
+    <h3 class="lease-parameters__label">{{ 'leaseQuote.fields.leaseTerm' | transloco }}</h3>
     <mat-button-toggle-group class="lease-parameters__toggle-group" formControlName="termMonths">
       @for (term of product().termsMonths; track term) {
         <mat-button-toggle [value]="term">{{ term }}</mat-button-toggle>
@@ -42,7 +42,7 @@
 
   <div class="lease-parameters__section">
     <h3 class="lease-parameters__label">
-      Buyout
+      {{ 'leaseQuote.fields.buyout' | transloco }}
       <span class="lease-parameters__value">{{ formGroup().controls.buyoutPercent.value }}%</span>
     </h3>
     <mat-slider
@@ -57,10 +57,12 @@
   </div>
 
   <div class="lease-parameters__section">
-    <h3 class="lease-parameters__label">Lease type</h3>
+    <h3 class="lease-parameters__label">{{ 'leaseQuote.fields.leaseType' | transloco }}</h3>
     <mat-button-toggle-group class="lease-parameters__toggle-group" formControlName="leaseType">
       @for (leaseType of product().leaseTypes; track leaseType.type) {
-        <mat-button-toggle [value]="leaseType.type">{{ leaseType.type | titlecase }}</mat-button-toggle>
+        <mat-button-toggle [value]="leaseType.type">{{
+          'leaseQuote.leaseType.' + (leaseType.type === 'OPERATING' ? 'operating' : 'financial') | transloco
+        }}</mat-button-toggle>
       }
     </mat-button-toggle-group>
   </div>

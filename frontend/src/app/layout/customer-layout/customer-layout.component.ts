@@ -10,11 +10,11 @@ import { NavigationItem } from '../models/navigation-item.model';
  * Customers (Admin-only), and any other Admin-facing feature.
  */
 const CUSTOMER_NAVIGATION: readonly NavigationItem[] = [
-  { label: 'Dashboard', route: '/customer/dashboard' },
-  { label: 'Lease Quote Simulator', route: '/customer/lease-quote' },
-  { label: 'My leases', route: '/customer/leases' },
-  { label: 'Documents', route: '/customer/documents' },
-  { label: 'My profile', route: '/customer/profile' },
+  { label: 'customer.nav.dashboard', route: '/customer/dashboard' },
+  { label: 'customer.nav.leaseQuote', route: '/customer/lease-quote' },
+  { label: 'customer.nav.myLeases', route: '/customer/leases' },
+  { label: 'customer.nav.documents', route: '/customer/documents' },
+  { label: 'customer.nav.myProfile', route: '/customer/profile' },
 ];
 
 /**

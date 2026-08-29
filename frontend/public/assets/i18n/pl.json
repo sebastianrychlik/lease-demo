@@ -1,0 +1,91 @@
+{
+  "common": {
+    "logout": "Wyloguj",
+    "loading": "Ładowanie…",
+    "myProfile": "Mój profil"
+  },
+  "language": {
+    "label": "Język",
+    "pl": "PL",
+    "en": "EN"
+  },
+  "customer": {
+    "nav": {
+      "dashboard": "Panel",
+      "leaseQuote": "Symulator leasingu",
+      "myLeases": "Moje leasingi",
+      "documents": "Dokumenty",
+      "myProfile": "Mój profil"
+    },
+    "dashboard": {
+      "title": "Witaj",
+      "welcomeWithName": "Witaj, {{name}}. Zobacz swoje leasingi, dokumenty i informacje o koncie.",
+      "welcomeGeneric": "Zobacz swoje leasingi, dokumenty i informacje o koncie.",
+      "myLeases": "Moje leasingi",
+      "myLeasesDescription": "Sprawdź stan swoich aktywnych umów leasingowych.",
+      "documents": "Dokumenty",
+      "documentsDescription": "Dostęp do dokumentów związanych z Twoim kontem.",
+      "myProfile": "Mój profil",
+      "myProfileDescription": "Przejrzyj informacje o swoim koncie."
+    }
+  },
+  "admin": {
+    "nav": {
+      "dashboard": "Panel",
+      "customers": "Klienci",
+      "leases": "Leasingi",
+      "uxDemo": "UX Demo"
+    },
+    "dashboard": {
+      "title": "Administracja",
+      "subtitle": "Zarządzaj klientami, leasingami i danymi operacyjnymi.",
+      "customers": "Klienci",
+      "customersDescription": "Zarządzaj kartotekami klientów i danymi tożsamościowymi.",
+      "leases": "Leasingi",
+      "leasesDescription": "Przeglądaj i zarządzaj wnioskami leasingowymi.",
+      "uxDemo": "UX Demo",
+      "uxDemoDescription": "Żywy katalog systemu projektowego dla deweloperów."
+    }
+  },
+  "leaseQuote": {
+    "title": "Symulator leasingu",
+    "subtitle": "Symulacja finansowania pojazdu — szacunkowa wycena na żywo, aktualizowana w trakcie wprowadzania danych",
+    "status": {
+      "loading": "Ładowanie produktów leasingowych…",
+      "empty": "Obecnie brak dostępnych produktów leasingowych.",
+      "error": "Konfiguracja produktu leasingowego jest obecnie niedostępna. Spróbuj ponownie za chwilę."
+    },
+    "fields": {
+      "vehiclePrice": "Cena pojazdu",
+      "currency": "Waluta",
+      "initialPayment": "Wpłata własna",
+      "leaseTerm": "Okres leasingu",
+      "buyout": "Wykup",
+      "leaseType": "Rodzaj leasingu"
+    },
+    "leaseType": {
+      "operating": "Leasing operacyjny",
+      "financial": "Leasing finansowy"
+    },
+    "summary": {
+      "calculating": "Obliczanie oferty…",
+      "errorTitle": "Nie można obecnie obliczyć oferty.",
+      "monthlyPayment": "Szacowana rata miesięczna",
+      "exchangeRate": "Kurs NBP {{currency}}/PLN",
+      "vehicleValue": "Wartość pojazdu",
+      "financedAmount": "Kwota finansowana",
+      "initialPayment": "Wpłata własna",
+      "buyout": "Wykup",
+      "total": "Szacowany koszt całkowity",
+      "vat": "Szacowany VAT",
+      "apr": "Demonstracyjne RRSO",
+      "disclaimer": "Wycena szacunkowa — nie stanowi wiążącej oferty finansowania."
+    },
+    "errors": {
+      "nbpUnavailable": "Usługa kursów walut NBP jest obecnie niedostępna. Spróbuj ponownie za chwilę.",
+      "invalidParameters": "Niektóre parametry leasingu są nieprawidłowe.",
+      "sessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie.",
+      "generic": "Wystąpił błąd podczas obliczania oferty. Spróbuj ponownie później."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+<div class="language-switcher" role="group" [attr.aria-label]="'language.label' | transloco">
+  @for (language of languages; track language) {
+    <button
+      type="button"
+      class="language-switcher__option"
+      [class.language-switcher__option--active]="activeLang() === language"
+      [attr.aria-pressed]="activeLang() === language"
+      [attr.aria-label]="('language.' + language) | transloco"
+      (click)="selectLanguage(language)"
+    >
+      {{ 'language.' + language | transloco }}
+    </button>
+  }
+</div>

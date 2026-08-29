@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import {
   combineLatest,
   catchError,
@@ -74,6 +75,7 @@ const RECALCULATION_DEBOUNCE_MS = 200;
     CardComponent,
     LeaseParametersComponent,
     QuoteSummaryComponent,
+    TranslocoModule,
   ],
   templateUrl: './lease-quote-page.component.html',
   styleUrl: './lease-quote-page.component.scss',
@@ -82,6 +84,7 @@ const RECALCULATION_DEBOUNCE_MS = 200;
 export class LeaseQuotePageComponent {
   private readonly leaseProductService = inject(LeaseProductService);
   private readonly leaseQuoteService = inject(LeaseQuoteService);
+  private readonly translocoService = inject(TranslocoService);
 
   /**
    * Form is constructed eagerly with placeholder values; every value is
@@ -194,7 +197,7 @@ export class LeaseQuotePageComponent {
         map((quote): QuoteSummaryViewState => ({ status: 'success', quote })),
         startWith<QuoteSummaryViewState>({ status: 'loading' }),
         catchError((error: unknown) =>
-          of<QuoteSummaryViewState>({ status: 'error', message: mapQuoteError(error) }),
+          of<QuoteSummaryViewState>({ status: 'error', message: this.mapQuoteError(error) }),
         ),
       ),
     ),
@@ -229,24 +232,24 @@ export class LeaseQuotePageComponent {
       controls.leaseType.setValue(product.defaultLeaseType);
     }
   }
+
+  /** Maps a backend error into a safe, translated, user-facing message. */
+  private mapQuoteError(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 502) {
+        return this.translocoService.translate('leaseQuote.errors.nbpUnavailable');
+      }
+      if (error.status === 400) {
+        return this.translocoService.translate('leaseQuote.errors.invalidParameters');
+      }
+      if (error.status === 401) {
+        return this.translocoService.translate('leaseQuote.errors.sessionExpired');
+      }
+    }
+    return this.translocoService.translate('leaseQuote.errors.generic');
+  }
 }
 
 function isWithinRange(value: number, range: PercentageRangeConfiguration): boolean {
   return value >= range.minPercent && value <= range.maxPercent;
-}
-
-/** Maps a backend error into a safe, user-facing message. */
-function mapQuoteError(error: unknown): string {
-  if (error instanceof HttpErrorResponse) {
-    if (error.status === 502) {
-      return 'The NBP exchange rate service is currently unavailable. Please try again shortly.';
-    }
-    if (error.status === 400) {
-      return 'Some of the lease parameters are invalid.';
-    }
-    if (error.status === 401) {
-      return 'Your session has expired. Please sign in again.';
-    }
-  }
-  return 'Something went wrong while calculating your quote. Please try again later.';
 }

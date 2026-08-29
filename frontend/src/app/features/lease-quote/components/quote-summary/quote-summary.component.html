@@ -1,12 +1,12 @@
 @if (viewState().status === 'loading') {
   <div class="quote-summary quote-summary--loading">
-    <p class="quote-summary__state">Calculating your quote&hellip;</p>
+    <p class="quote-summary__state">{{ 'leaseQuote.summary.calculating' | transloco }}</p>
   </div>
 }
 
 @if (viewState().status === 'error') {
   <div class="quote-summary quote-summary--error">
-    <p class="quote-summary__state">Unable to calculate a quote right now.</p>
+    <p class="quote-summary__state">{{ 'leaseQuote.summary.errorTitle' | transloco }}</p>
     <p class="quote-summary__error-message">{{ $any(viewState()).message }}</p>
   </div>
 }
@@ -15,48 +15,48 @@
   @let quote = $any(viewState()).quote;
 
   <div class="quote-summary">
-    <p class="quote-summary__headline">Estimated monthly payment</p>
+    <p class="quote-summary__headline">{{ 'leaseQuote.summary.monthlyPayment' | transloco }}</p>
     <p class="quote-summary__monthly">
       {{ quote.monthlyPaymentPln | number: '1.2-2' }} PLN
     </p>
 
     <dl class="quote-summary__grid">
       <div class="quote-summary__row">
-        <dt>NBP {{ quote.currency }}/PLN</dt>
+        <dt>{{ 'leaseQuote.summary.exchangeRate' | transloco: { currency: quote.currency } }}</dt>
         <dd>{{ quote.exchangeRate | number: '1.2-4' }}</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Vehicle value</dt>
+        <dt>{{ 'leaseQuote.summary.vehicleValue' | transloco }}</dt>
         <dd>{{ quote.vehiclePricePln | number: '1.2-2' }} PLN</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Financed amount</dt>
+        <dt>{{ 'leaseQuote.summary.financedAmount' | transloco }}</dt>
         <dd>{{ quote.financedAmountPln | number: '1.2-2' }} PLN</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Initial payment</dt>
+        <dt>{{ 'leaseQuote.summary.initialPayment' | transloco }}</dt>
         <dd>{{ quote.initialPaymentPln | number: '1.2-2' }} PLN</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Buyout</dt>
+        <dt>{{ 'leaseQuote.summary.buyout' | transloco }}</dt>
         <dd>{{ quote.buyoutPln | number: '1.2-2' }} PLN</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Estimated total</dt>
+        <dt>{{ 'leaseQuote.summary.total' | transloco }}</dt>
         <dd>{{ quote.totalLeaseCostPln | number: '1.2-2' }} PLN</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Estimated VAT</dt>
+        <dt>{{ 'leaseQuote.summary.vat' | transloco }}</dt>
         <dd>{{ quote.estimatedVatPln | number: '1.2-2' }} PLN</dd>
       </div>
       <div class="quote-summary__row">
-        <dt>Demo APR</dt>
+        <dt>{{ 'leaseQuote.summary.apr' | transloco }}</dt>
         <dd>{{ quote.annualRatePercent | number: '1.2-2' }}%</dd>
       </div>
     </dl>
 
     <p class="quote-summary__disclaimer">
-      Estimate only &mdash; not a binding financing offer.
+      {{ 'leaseQuote.summary.disclaimer' | transloco }}
     </p>
   </div>
 }
