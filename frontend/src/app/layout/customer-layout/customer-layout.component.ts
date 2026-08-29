@@ -11,6 +11,7 @@ import { NavigationItem } from '../models/navigation-item.model';
  */
 const CUSTOMER_NAVIGATION: readonly NavigationItem[] = [
   { label: 'Dashboard', route: '/customer/dashboard' },
+  { label: 'Lease Quote Simulator', route: '/lease-quote' },
   { label: 'My leases', route: '/customer/leases' },
   { label: 'Documents', route: '/customer/documents' },
   { label: 'My profile', route: '/customer/profile' },

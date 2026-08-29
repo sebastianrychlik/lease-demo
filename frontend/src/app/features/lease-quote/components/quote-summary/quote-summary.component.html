@@ -1,0 +1,62 @@
+@if (viewState().status === 'loading') {
+  <div class="quote-summary quote-summary--loading">
+    <p class="quote-summary__state">Calculating your quote&hellip;</p>
+  </div>
+}
+
+@if (viewState().status === 'error') {
+  <div class="quote-summary quote-summary--error">
+    <p class="quote-summary__state">Unable to calculate a quote right now.</p>
+    <p class="quote-summary__error-message">{{ $any(viewState()).message }}</p>
+  </div>
+}
+
+@if (viewState().status === 'success') {
+  @let quote = $any(viewState()).quote;
+
+  <div class="quote-summary">
+    <p class="quote-summary__headline">Estimated monthly payment</p>
+    <p class="quote-summary__monthly">
+      {{ quote.monthlyPaymentPln | number: '1.2-2' }} PLN
+    </p>
+
+    <dl class="quote-summary__grid">
+      <div class="quote-summary__row">
+        <dt>NBP {{ quote.currency }}/PLN</dt>
+        <dd>{{ quote.exchangeRate | number: '1.2-4' }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Vehicle value</dt>
+        <dd>{{ quote.vehiclePricePln | number: '1.2-2' }} PLN</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Financed amount</dt>
+        <dd>{{ quote.financedAmountPln | number: '1.2-2' }} PLN</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Initial payment</dt>
+        <dd>{{ quote.initialPaymentPln | number: '1.2-2' }} PLN</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Buyout</dt>
+        <dd>{{ quote.buyoutPln | number: '1.2-2' }} PLN</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Estimated total</dt>
+        <dd>{{ quote.totalLeaseCostPln | number: '1.2-2' }} PLN</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Estimated VAT</dt>
+        <dd>{{ quote.estimatedVatPln | number: '1.2-2' }} PLN</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>Demo APR</dt>
+        <dd>{{ quote.annualRatePercent | number: '1.2-2' }}%</dd>
+      </div>
+    </dl>
+
+    <p class="quote-summary__disclaimer">
+      Estimate only &mdash; not a binding financing offer.
+    </p>
+  </div>
+}

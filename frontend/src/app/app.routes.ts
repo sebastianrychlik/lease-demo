@@ -60,6 +60,12 @@ export const APP_ROUTES: Routes = [
     // as of M4.3: reachable via AdminLayout's "UX Demo" navigation link.
     // The convenient /ux-demo URL is preserved directly (not nested under
     // /admin) rather than duplicated under another route.
+    path: 'lease-quote',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./features/lease-quote/lease-quote.routes').then((m) => m.LEASE_QUOTE_ROUTES),
+  },
+  {
     path: 'ux-demo',
     canActivate: [authGuard, adminAreaGuard],
     loadChildren: () =>

@@ -1,6 +1,7 @@
 package com.leasedemo.exception;
 
 import com.leasedemo.exchange.exception.NbpClientException;
+import com.leasedemo.lease.quote.exception.UnsupportedCurrencyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +23,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleNbpClientException(NbpClientException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         problemDetail.setTitle("NBP API Unavailable");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles lease quote requests for a currency not present in the
+     * current NBP Table A response (M5.1).
+     */
+    @ExceptionHandler(UnsupportedCurrencyException.class)
+    public ProblemDetail handleUnsupportedCurrencyException(UnsupportedCurrencyException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problemDetail.setTitle("Unsupported Currency");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

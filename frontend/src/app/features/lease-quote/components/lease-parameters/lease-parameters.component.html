@@ -1,0 +1,53 @@
+<form class="lease-parameters" [formGroup]="formGroup()">
+  <div class="lease-parameters__row">
+    <mat-form-field appearance="outline" class="lease-parameters__price">
+      <mat-label>Vehicle price</mat-label>
+      <input matInput type="number" min="1" step="1000" formControlName="vehiclePrice" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="lease-parameters__currency">
+      <mat-label>Currency</mat-label>
+      <mat-select formControlName="currency">
+        <mat-option value="EUR">EUR</mat-option>
+        <mat-option value="PLN">PLN</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="lease-parameters__section">
+    <h3 class="lease-parameters__label">
+      Initial payment
+      <span class="lease-parameters__value">{{ formGroup().controls.initialPaymentPercent.value }}%</span>
+    </h3>
+    <mat-slider class="lease-parameters__slider" min="0" max="45" step="1" discrete>
+      <input matSliderThumb formControlName="initialPaymentPercent" />
+    </mat-slider>
+  </div>
+
+  <div class="lease-parameters__section">
+    <h3 class="lease-parameters__label">Lease term</h3>
+    <mat-button-toggle-group class="lease-parameters__toggle-group" formControlName="termMonths">
+      @for (term of termOptions; track term) {
+        <mat-button-toggle [value]="term">{{ term }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </div>
+
+  <div class="lease-parameters__section">
+    <h3 class="lease-parameters__label">
+      Buyout
+      <span class="lease-parameters__value">{{ formGroup().controls.buyoutPercent.value }}%</span>
+    </h3>
+    <mat-slider class="lease-parameters__slider" min="1" max="40" step="1" discrete>
+      <input matSliderThumb formControlName="buyoutPercent" />
+    </mat-slider>
+  </div>
+
+  <div class="lease-parameters__section">
+    <h3 class="lease-parameters__label">Lease type</h3>
+    <mat-button-toggle-group class="lease-parameters__toggle-group" formControlName="leaseType">
+      <mat-button-toggle value="OPERATING">Operating</mat-button-toggle>
+      <mat-button-toggle value="FINANCIAL">Financial</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+</form>

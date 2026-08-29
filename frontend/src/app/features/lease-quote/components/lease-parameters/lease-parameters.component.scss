@@ -1,0 +1,54 @@
+.lease-parameters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  &__price {
+    flex: 1 1 220px;
+  }
+
+  &__currency {
+    flex: 0 1 140px;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ld-color-text-secondary, #616161);
+  }
+
+  &__value {
+    font-weight: 700;
+    color: var(--ld-color-primary, #1565c0);
+  }
+
+  &__slider {
+    width: 100%;
+  }
+
+  &__toggle-group {
+    width: 100%;
+    display: flex;
+
+    ::ng-deep .mat-button-toggle {
+      flex: 1;
+      text-align: center;
+    }
+  }
+}
