@@ -40,3 +40,17 @@ body {
   color: var(--ld-color-text-primary);
   background-color: var(--ld-color-surface-muted);
 }
+
+/* -----------------------------------------------------------------------
+ * .ld-page — shared page-content container (§ M5.1.1).
+ *
+ * Owned globally so every routed page (Customer Dashboard, Lease Quote,
+ * future pages) shares the same content max-width/centering instead of
+ * each feature page redeclaring its own width rules. Layout shells
+ * (CustomerLayout/AdminLayout) still own the surrounding header/sidebar/
+ * background — this class only constrains the routed content itself.
+ * ----------------------------------------------------------------------- */
+.ld-page {
+  max-width: var(--ld-content-max-width);
+  margin: 0 auto;
+}

@@ -1,12 +1,14 @@
-<app-page-header title="Lease Quote Simulator" subtitle="Vehicle financing demo — live estimate, updates as you type">
-</app-page-header>
+<div class="ld-page">
+  <app-page-header title="Lease Quote Simulator" subtitle="Vehicle financing demo — live estimate, updates as you type">
+  </app-page-header>
 
-<div class="lease-quote-page">
-  <app-card class="lease-quote-page__parameters">
-    <app-lease-parameters [formGroup]="form" />
-  </app-card>
+  <div class="lease-quote-page">
+    <app-card class="lease-quote-page__parameters">
+      <app-lease-parameters [formGroup]="form" />
+    </app-card>
 
-  <app-card class="lease-quote-page__summary">
-    <app-quote-summary [viewState]="viewState()" />
-  </app-card>
+    <app-card class="lease-quote-page__summary">
+      <app-quote-summary [viewState]="viewState()" />
+    </app-card>
+  </div>
 </div>

@@ -40,6 +40,12 @@ export const CUSTOMER_ROUTES: Routes = [
           ),
       },
       {
+        path: 'lease-quote',
+        canActivate: [requireCustomerProfileGuard],
+        loadChildren: () =>
+          import('../lease-quote/lease-quote.routes').then((m) => m.LEASE_QUOTE_ROUTES),
+      },
+      {
         path: 'leases',
         canActivate: [requireCustomerProfileGuard],
         loadComponent: () =>

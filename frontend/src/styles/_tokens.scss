@@ -49,6 +49,15 @@ $ld-color-danger-hover: #991b1b;
 $ld-radius-sm: 4px;
 $ld-radius-md: 6px;
 
+// ---------------------------------------------------------------------------
+// Shared page layout (§ M5.1.1)
+// ---------------------------------------------------------------------------
+// Centralized so individual feature pages (Dashboard, Lease Quote, ...) don't
+// each redeclare their own content max-width/gutter. See `.ld-page` in
+// src/styles.scss.
+$ld-content-max-width: 1200px;
+$ld-section-gap: 1.5rem;
+
 $ld-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
 $ld-shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
 
@@ -90,4 +99,7 @@ $ld-font-family:
   --ld-shadow-md: #{$ld-shadow-md};
 
   --ld-font-family: #{$ld-font-family};
+
+  --ld-content-max-width: #{$ld-content-max-width};
+  --ld-section-gap: #{$ld-section-gap};
 }

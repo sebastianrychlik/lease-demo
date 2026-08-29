@@ -1,7 +1,12 @@
+@use '../../../../styles/tokens';
+
+// Feature-local composition only (two-panel parameters/summary grid).
+// Application shell (header/sidebar) and page content width (.ld-page) are
+// owned elsewhere — see CustomerLayout and src/styles.scss § M5.1.1.
 .lease-quote-page {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 1.5rem;
+  gap: tokens.$ld-section-gap;
   align-items: start;
 
   @media (max-width: 900px) {
@@ -10,7 +15,7 @@
 
   &__summary {
     position: sticky;
-    top: 1.5rem;
+    top: tokens.$ld-section-gap;
 
     @media (max-width: 900px) {
       position: static;
