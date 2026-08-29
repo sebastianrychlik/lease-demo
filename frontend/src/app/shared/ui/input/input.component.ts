@@ -19,14 +19,24 @@ class AppInputErrorStateMatcher implements ErrorStateMatcher {
   }
 }
 
+/** Native `<input>` `type` values `app-input` supports. */
+export type AppInputType = 'text' | 'number' | 'date';
+
 /**
- * LeaseDemo application-level text input.
+ * LeaseDemo application-level text/number/date input.
  *
  * Wraps Angular Material's form field + input primitives (label, focus,
  * accessibility, error-state styling) with a small LeaseDemo API and
  * standard `ControlValueAccessor` integration so it can be used exactly
  * like a native form control with Angular Forms — either template-driven
  * (`[(ngModel)]`) or reactive (`[formControl]` / `formControlName`).
+ *
+ * `type="number"` binds a numeric `FormControl<number | null>` —
+ * `onValueChange` explicitly coerces the native input's string value to a
+ * real `number` (or `null` when empty) so callers never need to
+ * parse/coerce strings themselves. `type="date"` binds a plain
+ * ISO (`YYYY-MM-DD`) string, matching the backend's `LocalDate` JSON
+ * shape directly with no extra Date-object conversion.
  *
  * This does NOT attempt to replace or reimplement Angular Forms; it only
  * supplies LeaseDemo's visual/label conventions around Material's input.
@@ -35,6 +45,8 @@ class AppInputErrorStateMatcher implements ErrorStateMatcher {
  * ```html
  * <app-input label="Email" placeholder="jane.doe@example.com" [(ngModel)]="email" />
  * <app-input label="PESEL" [formControl]="peselControl" errorMessage="Invalid PESEL" />
+ * <app-input type="number" label="Min %" [formControl]="minPercentControl" />
+ * <app-input type="date" label="Valid from" [formControl]="validFromControl" />
  * ```
  */
 @Component({
@@ -55,6 +67,10 @@ class AppInputErrorStateMatcher implements ErrorStateMatcher {
       }
       <input
         matInput
+        [type]="type()"
+        [step]="step() ?? null"
+        [min]="min() ?? null"
+        [max]="max() ?? null"
         [placeholder]="placeholder() ?? ''"
         [disabled]="disabled()"
         [ngModel]="value"
@@ -71,11 +87,23 @@ class AppInputErrorStateMatcher implements ErrorStateMatcher {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InputComponent implements ControlValueAccessor {
+  /** Native input type. Defaults to `'text'`. */
+  readonly type = input<AppInputType>('text');
+
   /** Optional field label, rendered via Material's floating label. */
   readonly label = input<string | undefined>(undefined);
 
   /** Optional placeholder text. */
   readonly placeholder = input<string | undefined>(undefined);
+
+  /** Optional native `step` (relevant for `type="number"`). */
+  readonly step = input<number | undefined>(undefined);
+
+  /** Optional native `min` (relevant for `type="number"`). */
+  readonly min = input<number | undefined>(undefined);
+
+  /** Optional native `max` (relevant for `type="number"`). */
+  readonly max = input<number | undefined>(undefined);
 
   /** Whether the field is currently in an error/invalid state. */
   readonly invalid = input<boolean>(false);
@@ -90,28 +118,60 @@ export class InputComponent implements ControlValueAccessor {
    */
   readonly disabledInput = input<boolean>(false, { alias: 'disabled' });
 
-  value = '';
+  /** Bound value — `string` for `type="text"/"date"`, `number | null` for `type="number"`. */
+  value: string | number | null = '';
   disabledState = false;
 
   readonly errorStateMatcher = new AppInputErrorStateMatcher(() => this.invalid());
 
-  private onChange: (value: string) => void = () => {};
+  private onChange: (value: string | number | null) => void = () => {};
   onTouched: () => void = () => {};
 
   disabled(): boolean {
     return this.disabledState || this.disabledInput();
   }
 
-  onValueChange(value: string): void {
-    this.value = value;
-    this.onChange(value);
+  /**
+   * Normalizes the raw value coming off `(ngModelChange)` before handing it
+   * to Angular Forms.
+   *
+   * IMPORTANT: because `[type]="type()"` is a PROPERTY binding rather than a
+   * static `type="number"` attribute, Angular's built-in `NumberValueAccessor`
+   * (which only activates via a static/text `[attr.type]`-independent
+   * selector match at compile time) does NOT attach here — this host always
+   * gets the plain `DefaultValueAccessor`/`NgModel` behavior, which emits the
+   * native input's raw STRING value regardless of `type="number"`. That was
+   * the root cause of validators like `integerRangeValidator`/
+   * `Number.isInteger(...)` rejecting perfectly valid numbers such as `51`
+   * (received as the string `"51"`).
+   *
+   * For `type="number"` this explicitly coerces to a real `number`
+   * (preserving decimals — no `parseInt`), mapping an empty string to `null`
+   * rather than `NaN`/`""`. `text`/`date` values are passed through
+   * unchanged.
+   */
+  onValueChange(value: string | number | null): void {
+    const normalized = this.normalize(value);
+    this.value = normalized;
+    this.onChange(normalized);
   }
 
-  writeValue(value: string): void {
-    this.value = value ?? '';
+  private normalize(value: string | number | null): string | number | null {
+    if (this.type() !== 'number') {
+      return value;
+    }
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    const numeric = typeof value === 'number' ? value : Number(value);
+    return Number.isNaN(numeric) ? null : numeric;
   }
 
-  registerOnChange(fn: (value: string) => void): void {
+  writeValue(value: string | number | null): void {
+    this.value = value ?? (this.type() === 'number' ? null : '');
+  }
+
+  registerOnChange(fn: (value: string | number | null) => void): void {
     this.onChange = fn;
   }
 

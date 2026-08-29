@@ -18,4 +18,13 @@ public interface LeaseProductRepository extends JpaRepository<LeaseProduct, UUID
     List<LeaseProduct> findByMarketAndEnabledTrueOrderByNameAscCodeAsc(String market);
 
     Optional<LeaseProduct> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    /**
+     * ALL products, for ADMIN management (M5.1.4) — including disabled,
+     * future-valid, and expired ones. Sorted deterministically by market,
+     * then name, then code (§7).
+     */
+    List<LeaseProduct> findAllByOrderByMarketAscNameAscCodeAsc();
 }

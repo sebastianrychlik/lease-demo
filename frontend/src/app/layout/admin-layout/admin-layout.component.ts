@@ -9,6 +9,7 @@ import { NavigationItem } from '../models/navigation-item.model';
 const ADMIN_NAVIGATION: readonly NavigationItem[] = [
   { label: 'admin.nav.dashboard', route: '/admin/dashboard' },
   { label: 'admin.nav.customers', route: '/admin/customers' },
+  { label: 'admin.nav.leaseProducts', route: '/admin/lease-products' },
   { label: 'admin.nav.leases', route: '/admin/leases' },
 ];
 

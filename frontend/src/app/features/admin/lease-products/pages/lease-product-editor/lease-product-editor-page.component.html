@@ -1,0 +1,235 @@
+<div class="lease-product-editor-page">
+  <app-page-header
+    [title]="(isEditMode() ? 'admin.leaseProducts.edit' : 'admin.leaseProducts.add') | transloco"
+  ></app-page-header>
+
+  @if (viewState().status === 'loading') {
+    <app-card>
+      <p>{{ 'common.loading' | transloco }}</p>
+    </app-card>
+  } @else {
+    @if (viewState().status === 'error') {
+      <app-card>
+        <p role="alert">{{ $any(viewState()).message }}</p>
+      </app-card>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="lease-product-editor-page__form">
+      <app-card>
+        <h2>{{ 'admin.leaseProducts.sections.basic' | transloco }}</h2>
+        <div class="lease-product-editor-page__grid lease-product-editor-page__grid--2">
+          <app-input
+            [label]="'admin.leaseProducts.fields.code' | transloco"
+            formControlName="code"
+            [invalid]="form.controls.code.invalid && form.controls.code.touched"
+            [errorMessage]="errorMessage(form.controls.code)"
+          ></app-input>
+          <app-input
+            [label]="'admin.leaseProducts.fields.name' | transloco"
+            formControlName="name"
+            [invalid]="form.controls.name.invalid && form.controls.name.touched"
+            [errorMessage]="errorMessage(form.controls.name)"
+          ></app-input>
+
+          <app-select
+            [label]="'admin.leaseProducts.fields.market' | transloco"
+            [options]="marketOptions"
+            formControlName="market"
+          ></app-select>
+
+          <app-checkbox
+            [label]="'admin.leaseProducts.fields.enabled' | transloco"
+            formControlName="enabled"
+          ></app-checkbox>
+
+          <app-input
+            type="date"
+            [label]="'admin.leaseProducts.fields.validFrom' | transloco"
+            formControlName="validFrom"
+          ></app-input>
+          <app-input
+            type="date"
+            [label]="'admin.leaseProducts.fields.validTo' | transloco"
+            formControlName="validTo"
+            [invalid]="form.controls.validTo.invalid"
+            [errorMessage]="errorMessage(form.controls.validTo)"
+          ></app-input>
+        </div>
+      </app-card>
+
+      <app-card>
+        <h2>{{ 'admin.leaseProducts.sections.currencies' | transloco }}</h2>
+        <div formGroupName="currencies" class="lease-product-editor-page__checkbox-row">
+          @for (currency of allCurrencies; track currency) {
+            <app-checkbox [label]="currency" [formControlName]="currency"></app-checkbox>
+          }
+        </div>
+        @if (errorMessage(form.controls.currencies); as currenciesError) {
+          <p class="lease-product-editor-page__group-error" role="alert">{{ currenciesError }}</p>
+        }
+
+        <div class="lease-product-editor-page__grid lease-product-editor-page__grid--2">
+          <app-select
+            [label]="'admin.leaseProducts.fields.settlementCurrency' | transloco"
+            [options]="currencyOptions"
+            formControlName="settlementCurrency"
+            [invalid]="form.controls.settlementCurrency.invalid"
+            [errorMessage]="errorMessage(form.controls.settlementCurrency)"
+          ></app-select>
+
+          <app-select
+            [label]="'admin.leaseProducts.fields.defaultCurrency' | transloco"
+            [options]="currencyOptions"
+            formControlName="defaultCurrency"
+            [invalid]="form.controls.defaultCurrency.invalid"
+            [errorMessage]="errorMessage(form.controls.defaultCurrency)"
+          ></app-select>
+        </div>
+      </app-card>
+
+      <app-card>
+        <h2>{{ 'admin.leaseProducts.sections.terms' | transloco }}</h2>
+        <div class="lease-product-editor-page__terms">
+          @for (term of form.controls.terms.value; track term) {
+            <span class="lease-product-editor-page__chip">
+              {{ term }}
+              <app-button type="button" variant="secondary" (click)="removeTerm(term)">&times;</app-button>
+            </span>
+          }
+        </div>
+
+        <div class="lease-product-editor-page__term-add-row">
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.terms' | transloco"
+            [formControl]="newTermValue"
+            [invalid]="newTermValue.invalid && newTermValue.touched"
+            [errorMessage]="errorMessage(newTermValue)"
+          ></app-input>
+          <app-button type="button" variant="secondary" (click)="addTerm()">
+            {{ 'admin.leaseProducts.addTerm' | transloco }}
+          </app-button>
+        </div>
+
+        <app-select
+          [label]="'admin.leaseProducts.fields.defaultTerm' | transloco"
+          [options]="termOptions()"
+          formControlName="defaultTermMonths"
+        ></app-select>
+      </app-card>
+
+      <app-card>
+        <h2>{{ 'admin.leaseProducts.sections.initialPayment' | transloco }}</h2>
+        <div class="lease-product-editor-page__grid lease-product-editor-page__grid--4">
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.min' | transloco"
+            formControlName="initialPaymentMin"
+            [invalid]="form.controls.initialPaymentMin.invalid"
+            [errorMessage]="errorMessage(form.controls.initialPaymentMin)"
+          ></app-input>
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.max' | transloco"
+            formControlName="initialPaymentMax"
+            [invalid]="form.controls.initialPaymentMax.invalid"
+            [errorMessage]="errorMessage(form.controls.initialPaymentMax)"
+          ></app-input>
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.default' | transloco"
+            formControlName="initialPaymentDefault"
+            [invalid]="form.controls.initialPaymentDefault.invalid"
+            [errorMessage]="errorMessage(form.controls.initialPaymentDefault)"
+          ></app-input>
+          <app-input
+            type="number"
+            [step]="0.5"
+            [label]="'admin.leaseProducts.fields.step' | transloco"
+            formControlName="initialPaymentStep"
+            [invalid]="form.controls.initialPaymentStep.invalid"
+            [errorMessage]="errorMessage(form.controls.initialPaymentStep)"
+          ></app-input>
+        </div>
+      </app-card>
+
+      <app-card>
+        <h2>{{ 'admin.leaseProducts.sections.buyout' | transloco }}</h2>
+        <div class="lease-product-editor-page__grid lease-product-editor-page__grid--4">
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.min' | transloco"
+            formControlName="buyoutMin"
+            [invalid]="form.controls.buyoutMin.invalid"
+            [errorMessage]="errorMessage(form.controls.buyoutMin)"
+          ></app-input>
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.max' | transloco"
+            formControlName="buyoutMax"
+            [invalid]="form.controls.buyoutMax.invalid"
+            [errorMessage]="errorMessage(form.controls.buyoutMax)"
+          ></app-input>
+          <app-input
+            type="number"
+            [label]="'admin.leaseProducts.fields.default' | transloco"
+            formControlName="buyoutDefault"
+            [invalid]="form.controls.buyoutDefault.invalid"
+            [errorMessage]="errorMessage(form.controls.buyoutDefault)"
+          ></app-input>
+          <app-input
+            type="number"
+            [step]="0.5"
+            [label]="'admin.leaseProducts.fields.step' | transloco"
+            formControlName="buyoutStep"
+            [invalid]="form.controls.buyoutStep.invalid"
+            [errorMessage]="errorMessage(form.controls.buyoutStep)"
+          ></app-input>
+        </div>
+      </app-card>
+
+      <app-card>
+        <h2>{{ 'admin.leaseProducts.sections.leaseTypes' | transloco }}</h2>
+        @if (errorMessage(form.controls.leaseTypesEnabled); as leaseTypesError) {
+          <p class="lease-product-editor-page__group-error" role="alert">{{ leaseTypesError }}</p>
+        }
+        <div formGroupName="leaseTypesEnabled">
+          @for (leaseType of allLeaseTypes; track leaseType) {
+            <div class="lease-product-editor-page__lease-type">
+              <app-checkbox
+                [label]="'leaseQuote.leaseType.' + leaseType.toLowerCase() | transloco"
+                [formControlName]="leaseType"
+              ></app-checkbox>
+              <app-input
+                type="number"
+                [step]="0.01"
+                [label]="'admin.leaseProducts.fields.apr' | transloco"
+                [formControl]="form.controls.leaseTypeRates.controls[leaseType]"
+                [invalid]="form.controls.leaseTypeRates.controls[leaseType].invalid"
+                [errorMessage]="errorMessage(form.controls.leaseTypeRates.controls[leaseType])"
+              ></app-input>
+            </div>
+          }
+        </div>
+
+        <app-select
+          [label]="'admin.leaseProducts.fields.defaultLeaseType' | transloco"
+          [options]="leaseTypeOptions()"
+          formControlName="defaultLeaseType"
+          [invalid]="form.controls.defaultLeaseType.invalid"
+          [errorMessage]="errorMessage(form.controls.defaultLeaseType)"
+        ></app-select>
+      </app-card>
+
+      <div class="lease-product-editor-page__actions">
+        <app-button type="button" variant="secondary" (click)="cancel()">
+          {{ 'admin.leaseProducts.cancel' | transloco }}
+        </app-button>
+        <app-button type="submit" variant="primary" [disabled]="form.invalid || viewState().status === 'saving'">
+          {{ 'admin.leaseProducts.save' | transloco }}
+        </app-button>
+      </div>
+    </form>
+  }
+</div>
+

@@ -1,5 +1,6 @@
 package com.leasedemo.lease.product.mapper;
 
+import com.leasedemo.lease.product.dto.AdminLeaseProductResponse;
 import com.leasedemo.lease.product.dto.LeaseProductConfigurationResponse;
 import com.leasedemo.lease.product.dto.LeaseTypeOptionDto;
 import com.leasedemo.lease.product.dto.PercentageRangeDto;
@@ -46,6 +47,47 @@ public class LeaseProductMapper {
                 product.getDefaultCurrency(),
                 product.getDefaultTermMonths(),
                 product.getDefaultLeaseType()
+        );
+    }
+
+    /**
+     * Maps the entity to the ADMIN-facing {@link AdminLeaseProductResponse}
+     * (M5.1.4) — includes {@code enabled}, validity dates, and audit
+     * timestamps that the CUSTOMER DTO deliberately omits.
+     */
+    public AdminLeaseProductResponse toAdminResponse(LeaseProduct product) {
+        return new AdminLeaseProductResponse(
+                product.getCode(),
+                product.getName(),
+                product.getMarket(),
+                product.isEnabled(),
+                product.getValidFrom(),
+                product.getValidTo(),
+                product.getCurrencies().stream()
+                        .sorted(Comparator.comparing(Enum::name))
+                        .toList(),
+                product.getSettlementCurrency(),
+                product.getDefaultCurrency(),
+                product.getTermsMonths().stream()
+                        .sorted()
+                        .toList(),
+                product.getDefaultTermMonths(),
+                new PercentageRangeDto(
+                        product.getInitialPaymentMinPercent(),
+                        product.getInitialPaymentMaxPercent(),
+                        product.getInitialPaymentDefaultPercent(),
+                        product.getInitialPaymentStepPercent()
+                ),
+                new PercentageRangeDto(
+                        product.getBuyoutMinPercent(),
+                        product.getBuyoutMaxPercent(),
+                        product.getBuyoutDefaultPercent(),
+                        product.getBuyoutStepPercent()
+                ),
+                toLeaseTypeOptions(product.getLeaseTypeAnnualRatePercent()),
+                product.getDefaultLeaseType(),
+                product.getCreatedAt(),
+                product.getUpdatedAt()
         );
     }
 

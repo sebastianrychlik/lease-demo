@@ -1,6 +1,8 @@
 package com.leasedemo.exception;
 
 import com.leasedemo.exchange.exception.NbpClientException;
+import com.leasedemo.lease.product.exception.DuplicateLeaseProductCodeException;
+import com.leasedemo.lease.product.exception.InvalidLeaseProductConfigurationException;
 import com.leasedemo.lease.product.exception.InvalidLeaseProductOptionException;
 import com.leasedemo.lease.product.exception.LeaseProductNotFoundException;
 import com.leasedemo.lease.product.exception.LeaseProductUnavailableException;
@@ -76,6 +78,32 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleInvalidLeaseProductOptionException(InvalidLeaseProductOptionException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Invalid Lease Product Option");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles ADMIN Lease Product create requests using a code that
+     * already exists (M5.1.4 §11) — product code must be unique.
+     */
+    @ExceptionHandler(DuplicateLeaseProductCodeException.class)
+    public ProblemDetail handleDuplicateLeaseProductCodeException(DuplicateLeaseProductCodeException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problemDetail.setTitle("Duplicate Lease Product Code");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles ADMIN Lease Product create/update requests that fail
+     * cross-field business validation (M5.1.4 §16-22) — e.g. settlement
+     * currency not among accepted currencies, invalid range, unknown
+     * default lease type.
+     */
+    @ExceptionHandler(InvalidLeaseProductConfigurationException.class)
+    public ProblemDetail handleInvalidLeaseProductConfigurationException(InvalidLeaseProductConfigurationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid Lease Product Configuration");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

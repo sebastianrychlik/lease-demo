@@ -33,6 +33,7 @@
     "nav": {
       "dashboard": "Panel",
       "customers": "Klienci",
+      "leaseProducts": "Produkty leasingowe",
       "leases": "Leasingi",
       "uxDemo": "UX Demo"
     },
@@ -45,7 +46,68 @@
       "leasesDescription": "Przeglądaj i zarządzaj wnioskami leasingowymi.",
       "uxDemo": "UX Demo",
       "uxDemoDescription": "Żywy katalog systemu projektowego dla deweloperów."
+    },
+    "leaseProducts": {
+      "title": "Produkty leasingowe",
+      "subtitle": "Zarządzaj konfiguracją produktów leasingowych po stronie backendu.",
+      "add": "Dodaj produkt",
+      "edit": "Edytuj produkt",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "retry": "Ponów",
+      "addTerm": "Dodaj",
+      "empty": "Brak skonfigurowanych produktów leasingowych.",
+      "status": {
+        "enabled": "Aktywny",
+        "disabled": "Nieaktywny"
+      },
+      "sections": {
+        "basic": "Informacje podstawowe",
+        "currencies": "Waluty",
+        "terms": "Okresy leasingu",
+        "initialPayment": "Wpłata własna",
+        "buyout": "Wykup",
+        "leaseTypes": "Rodzaje leasingu"
+      },
+      "fields": {
+        "code": "Kod",
+        "name": "Nazwa",
+        "market": "Rynek",
+        "enabled": "Aktywny",
+        "validFrom": "Ważny od",
+        "validTo": "Ważny do",
+        "settlementCurrency": "Waluta rozliczeniowa",
+        "defaultCurrency": "Domyślna waluta",
+        "terms": "Okresy",
+        "defaultTerm": "Domyślny okres",
+        "min": "Min",
+        "max": "Max",
+        "default": "Domyślna",
+        "step": "Krok",
+        "apr": "RRSO (%)",
+        "defaultLeaseType": "Domyślny rodzaj leasingu",
+        "updatedAt": "Zaktualizowano"
+      },
+      "errors": {
+        "loadFailed": "Nie udało się wczytać danych produktu leasingowego.",
+        "saveFailed": "Nie udało się zapisać produktu."
+      }
     }
+  },
+  "validation": {
+    "required": "Pole jest wymagane.",
+    "pattern": "Wartość ma nieprawidłowy format.",
+    "nonNegative": "Wartość nie może być ujemna.",
+    "positive": "Wartość musi być większa od zera.",
+    "maxValue": "Wartość nie może być większa niż {{max}}.",
+    "integerRange": "Wartość musi być liczbą całkowitą od {{min}} do {{max}}.",
+    "duplicate": "Ta wartość już istnieje.",
+    "notInAllowedValues": "Wartość musi być jedną z dozwolonych opcji.",
+    "rangeOrder": "Wartość maksymalna nie może być mniejsza od minimalnej.",
+    "defaultOutsideRange": "Wartość domyślna musi mieścić się w zakresie od {{min}} do {{max}}.",
+    "dateOrder": "Data „Ważny do” nie może być wcześniejsza niż data „Ważny od”.",
+    "atLeastOne": "Należy wybrać co najmniej jedną opcję.",
+    "invalid": "Ta wartość jest nieprawidłowa."
   },
   "leaseQuote": {
     "title": "Symulator leasingu",

@@ -143,8 +143,9 @@ public class LeaseProduct {
     @Column(name = "annual_rate_percent")
     private Map<LeaseType, BigDecimal> leaseTypeAnnualRatePercent = new LinkedHashMap<>();
 
-    protected LeaseProduct() {
-        // required by JPA
+    public LeaseProduct() {
+        // required by JPA; also used by AdminLeaseProductService to construct
+        // new products (M5.1.4) — code/fields are set via the setters below.
     }
 
     @PrePersist
@@ -245,6 +246,116 @@ public class LeaseProduct {
 
     public Map<LeaseType, BigDecimal> getLeaseTypeAnnualRatePercent() {
         return leaseTypeAnnualRatePercent;
+    }
+
+    // ── ADMIN write-side mutators (M5.1.4) ──────────────────────────────
+    // Simple setters used exclusively by AdminLeaseProductService when
+    // creating/updating a product inside a single @Transactional write.
+    // All business validation happens in AdminLeaseProductService before
+    // these are invoked — the entity itself stays a plain JPA mapping.
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setMarket(String market) {
+        this.market = market;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setInitialPaymentMinPercent(BigDecimal value) {
+        this.initialPaymentMinPercent = value;
+    }
+
+    public void setInitialPaymentMaxPercent(BigDecimal value) {
+        this.initialPaymentMaxPercent = value;
+    }
+
+    public void setInitialPaymentDefaultPercent(BigDecimal value) {
+        this.initialPaymentDefaultPercent = value;
+    }
+
+    public void setInitialPaymentStepPercent(BigDecimal value) {
+        this.initialPaymentStepPercent = value;
+    }
+
+    public void setBuyoutMinPercent(BigDecimal value) {
+        this.buyoutMinPercent = value;
+    }
+
+    public void setBuyoutMaxPercent(BigDecimal value) {
+        this.buyoutMaxPercent = value;
+    }
+
+    public void setBuyoutDefaultPercent(BigDecimal value) {
+        this.buyoutDefaultPercent = value;
+    }
+
+    public void setBuyoutStepPercent(BigDecimal value) {
+        this.buyoutStepPercent = value;
+    }
+
+    public void setDefaultCurrency(LeaseCurrency defaultCurrency) {
+        this.defaultCurrency = defaultCurrency;
+    }
+
+    public void setSettlementCurrency(LeaseCurrency settlementCurrency) {
+        this.settlementCurrency = settlementCurrency;
+    }
+
+    public void setDefaultTermMonths(Integer defaultTermMonths) {
+        this.defaultTermMonths = defaultTermMonths;
+    }
+
+    public void setDefaultLeaseType(LeaseType defaultLeaseType) {
+        this.defaultLeaseType = defaultLeaseType;
+    }
+
+    public void setValidFrom(LocalDate validFrom) {
+        this.validFrom = validFrom;
+    }
+
+    public void setValidTo(LocalDate validTo) {
+        this.validTo = validTo;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    /**
+     * Replaces the accepted vehicle-price currencies in place — never
+     * reassigns the collection reference, so Hibernate's
+     * {@code ElementCollection} owner-side change tracking removes/inserts
+     * the correct {@code lease_product_currency} rows within the current
+     * transaction.
+     */
+    public void replaceCurrencies(Set<LeaseCurrency> newCurrencies) {
+        this.currencies.clear();
+        this.currencies.addAll(newCurrencies);
+    }
+
+    /** Replaces the offered lease terms in place — see {@link #replaceCurrencies}. */
+    public void replaceTermsMonths(Set<Integer> newTerms) {
+        this.termsMonths.clear();
+        this.termsMonths.addAll(newTerms);
+    }
+
+    /** Replaces the offered lease types + APR in place — see {@link #replaceCurrencies}. */
+    public void replaceLeaseTypeAnnualRatePercent(Map<LeaseType, BigDecimal> newRates) {
+        this.leaseTypeAnnualRatePercent.clear();
+        this.leaseTypeAnnualRatePercent.putAll(newRates);
     }
 
     /**

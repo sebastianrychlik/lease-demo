@@ -33,6 +33,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "customers": "Customers",
+      "leaseProducts": "Lease Products",
       "leases": "Leases",
       "uxDemo": "UX Demo"
     },
@@ -45,7 +46,68 @@
       "leasesDescription": "Review and manage lease applications.",
       "uxDemo": "UX Demo",
       "uxDemoDescription": "Living design-system catalog for developers."
+    },
+    "leaseProducts": {
+      "title": "Lease Products",
+      "subtitle": "Manage backend-driven Lease Product configuration.",
+      "add": "Add product",
+      "edit": "Edit product",
+      "save": "Save",
+      "cancel": "Cancel",
+      "retry": "Retry",
+      "addTerm": "Add",
+      "empty": "No lease products configured yet.",
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "sections": {
+        "basic": "Basic information",
+        "currencies": "Currencies",
+        "terms": "Lease terms",
+        "initialPayment": "Initial payment",
+        "buyout": "Buyout",
+        "leaseTypes": "Lease types"
+      },
+      "fields": {
+        "code": "Code",
+        "name": "Name",
+        "market": "Market",
+        "enabled": "Enabled",
+        "validFrom": "Valid from",
+        "validTo": "Valid to",
+        "settlementCurrency": "Settlement currency",
+        "defaultCurrency": "Default currency",
+        "terms": "Terms",
+        "defaultTerm": "Default term",
+        "min": "Min",
+        "max": "Max",
+        "default": "Default",
+        "step": "Step",
+        "apr": "APR (%)",
+        "defaultLeaseType": "Default lease type",
+        "updatedAt": "Updated"
+      },
+      "errors": {
+        "loadFailed": "Unable to load lease product data.",
+        "saveFailed": "Unable to save lease product."
+      }
     }
+  },
+  "validation": {
+    "required": "This field is required.",
+    "pattern": "Value has an invalid format.",
+    "nonNegative": "Value cannot be negative.",
+    "positive": "Value must be greater than zero.",
+    "maxValue": "Value cannot be greater than {{max}}.",
+    "integerRange": "Value must be an integer between {{min}} and {{max}}.",
+    "duplicate": "This value already exists.",
+    "notInAllowedValues": "Value must be one of the allowed options.",
+    "rangeOrder": "Maximum value cannot be lower than minimum value.",
+    "defaultOutsideRange": "Default value must be between {{min}} and {{max}}.",
+    "dateOrder": "'Valid to' cannot be earlier than 'Valid from'.",
+    "atLeastOne": "At least one option must be selected.",
+    "invalid": "This value is invalid."
   },
   "leaseQuote": {
     "title": "Lease Quote Simulator",

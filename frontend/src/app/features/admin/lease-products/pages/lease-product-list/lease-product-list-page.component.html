@@ -1,0 +1,75 @@
+<div class="lease-product-list-page">
+  <app-page-header
+    [title]="'admin.leaseProducts.title' | transloco"
+    [subtitle]="'admin.leaseProducts.subtitle' | transloco"
+  >
+    <app-button variant="primary" (click)="addProduct()">
+      {{ 'admin.leaseProducts.add' | transloco }}
+    </app-button>
+  </app-page-header>
+
+  <app-card>
+    @switch (viewState().status) {
+      @case ('loading') {
+        <p class="lease-product-list-page__state">{{ 'common.loading' | transloco }}</p>
+      }
+      @case ('error') {
+        <div class="lease-product-list-page__state" role="alert">
+          <p>{{ 'admin.leaseProducts.errors.loadFailed' | transloco }}</p>
+          <app-button type="button" variant="secondary" (click)="load()">
+            {{ 'admin.leaseProducts.retry' | transloco }}
+          </app-button>
+        </div>
+      }
+      @case ('empty') {
+        <p class="lease-product-list-page__state">{{ 'admin.leaseProducts.empty' | transloco }}</p>
+      }
+      @default {
+        <table class="lease-product-list-page__table">
+          <thead>
+            <tr>
+              <th>{{ 'admin.leaseProducts.fields.code' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.name' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.market' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.enabled' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.settlementCurrency' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.defaultCurrency' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.terms' | transloco }}</th>
+              <th>{{ 'admin.leaseProducts.fields.updatedAt' | transloco }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of viewState().status === 'success' ? $any(viewState()).products : []; track product.code) {
+              <tr>
+                <td>{{ product.code }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.market }}</td>
+                <td>
+                  @if (product.enabled) {
+                    <span class="lease-product-list-page__badge lease-product-list-page__badge--enabled">
+                      {{ 'admin.leaseProducts.status.enabled' | transloco }}
+                    </span>
+                  } @else {
+                    <span class="lease-product-list-page__badge lease-product-list-page__badge--disabled">
+                      {{ 'admin.leaseProducts.status.disabled' | transloco }}
+                    </span>
+                  }
+                </td>
+                <td>{{ product.settlementCurrency }}</td>
+                <td>{{ product.defaultCurrency }}</td>
+                <td>{{ product.termsMonths.join(', ') }}</td>
+                <td>{{ product.updatedAt | date: 'short' }}</td>
+                <td>
+                  <app-button type="button" variant="secondary" (click)="editProduct(product.code)">
+                    {{ 'admin.leaseProducts.edit' | transloco }}
+                  </app-button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  </app-card>
+</div>

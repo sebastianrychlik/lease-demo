@@ -62,6 +62,75 @@ describe('InputComponent', () => {
   });
 });
 
+describe('InputComponent (number semantics)', () => {
+  let fixture: ComponentFixture<InputComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [InputComponent, NoopAnimationsModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(InputComponent);
+    fixture.componentRef.setInput('type', 'number');
+    fixture.detectChanges();
+  });
+
+  function nativeInput(): HTMLInputElement {
+    return fixture.nativeElement.querySelector('input');
+  }
+
+  it('emits a real number (not a string) for "51"', () => {
+    let emitted: unknown;
+    fixture.componentInstance.registerOnChange((value) => (emitted = value));
+    nativeInput().value = '51';
+    nativeInput().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(emitted).toBe(51);
+    expect(typeof emitted).toBe('number');
+  });
+
+  it('preserves decimals for "7.2"', () => {
+    let emitted: unknown;
+    fixture.componentInstance.registerOnChange((value) => (emitted = value));
+    nativeInput().value = '7.2';
+    nativeInput().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(emitted).toBe(7.2);
+  });
+
+  it('emits null when cleared', () => {
+    let emitted: unknown = undefined;
+    fixture.componentInstance.registerOnChange((value) => (emitted = value));
+    nativeInput().value = '';
+    nativeInput().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(emitted).toBeNull();
+  });
+});
+
+describe('InputComponent (text semantics unaffected)', () => {
+  let fixture: ComponentFixture<InputComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [InputComponent, NoopAnimationsModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(InputComponent);
+    fixture.detectChanges();
+  });
+
+  it('keeps "51" as a string for type="text"', () => {
+    let emitted: unknown;
+    fixture.componentInstance.registerOnChange((value) => (emitted = value));
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.value = '51';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(emitted).toBe('51');
+  });
+});
+
 describe('InputComponent (ngModel integration)', () => {
   let hostFixture: ComponentFixture<HostComponent>;
 
