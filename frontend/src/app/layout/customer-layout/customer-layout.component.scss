@@ -1,0 +1,35 @@
+@use '../../../styles/tokens';
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-shell__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-shell__sidebar {
+  flex-shrink: 0;
+  width: 15rem;
+  background-color: tokens.$ld-color-primary;
+
+  @media (max-width: 900px) {
+    width: 3.75rem;
+  }
+}
+
+.app-shell__content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.5rem;
+  background-color: tokens.$ld-color-surface-muted;
+  overflow-y: auto;
+
+  @media (max-width: 600px) {
+    padding: 1rem;
+  }
+}

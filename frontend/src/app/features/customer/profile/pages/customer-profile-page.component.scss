@@ -1,0 +1,25 @@
+.profile-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin: 0;
+}
+
+.profile-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-secondary, #64748b);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--color-text-primary, #0f172a);
+  }
+}

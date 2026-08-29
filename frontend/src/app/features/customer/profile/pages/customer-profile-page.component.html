@@ -1,0 +1,39 @@
+<app-page-header
+  title="My profile"
+  subtitle="Review your account information."
+></app-page-header>
+
+@if (profile(); as profile) {
+  <app-card>
+    <dl class="profile-page__grid">
+      <div class="profile-page__field">
+        <dt>Name</dt>
+        <dd>{{ profile.firstName }} {{ profile.lastName }}</dd>
+      </div>
+      <div class="profile-page__field">
+        <dt>Email</dt>
+        <dd>{{ profile.email }}</dd>
+      </div>
+      <div class="profile-page__field">
+        <dt>Phone number</dt>
+        <dd>{{ profile.phoneNumber ?? '—' }}</dd>
+      </div>
+      <div class="profile-page__field">
+        <dt>Date of birth</dt>
+        <dd>{{ profile.dateOfBirth }}</dd>
+      </div>
+      <div class="profile-page__field">
+        <dt>Gender</dt>
+        <dd>{{ profile.gender === 'FEMALE' ? 'Female' : 'Male' }}</dd>
+      </div>
+      <div class="profile-page__field">
+        <dt>PESEL</dt>
+        <dd>Registered</dd>
+      </div>
+    </dl>
+  </app-card>
+} @else {
+  <app-card>
+    <p>Your profile could not be loaded right now. Please try again later.</p>
+  </app-card>
+}

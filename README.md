@@ -197,3 +197,220 @@ See `docs/development/milestones/M2.0-exchange-rates.md` for exchange rates feat
 ## Documentation
 
 <!-- TODO: Link to all documents under docs/ (architecture, commands, guides, ADRs, interview notes). -->
+
+
+## Local Development Infrastructure
+
+LeaseDemo local environment is designed as a small distributed-systems laboratory.
+Angular and Spring Boot can run directly on the host during development, while
+infrastructure services run as Docker containers.
+
+### Application
+
+| Component | Runtime | Host Port | Purpose |
+|---|---|---:|---|
+| Angular Frontend | Local process | `4200` | Admin and Customer web application |
+| Spring Boot Backend | Local process | `8080` | REST API, business logic, security and integration layer |
+
+### Infrastructure Containers
+
+| # | Container | Host Port | Purpose |
+|---:|---|---:|---|
+| 1 | `lease-demo-keycloak` | `8081` | Authentication, OAuth2/OIDC, JWT, ADMIN/CUSTOMER roles |
+| 2 | `lease-demo-postgres-pl` | `5433` | Polish PostgreSQL business database |
+| 3 | `lease-demo-postgres-de` | `5434` | German PostgreSQL business database / replication node |
+| 4 | `lease-demo-redis-shared` | `6379` | Distributed cache and shared ephemeral state |
+| 5 | `lease-demo-kafka-events` | `9092` | Domain event streaming |
+| 6 | `lease-demo-kafka-connect-cdc` | `8083` | Kafka Connect + Debezium PostgreSQL CDC |
+| 7 | `lease-demo-elasticsearch-eu-search` | `9200` | Shared EU search/read model |
+| 8 | `lease-demo-mailpit` | `8025` UI / `1025` SMTP | Local email testing |
+| 9 | `lease-demo-kafka-ui` | `8090` | Kafka topics, partitions, messages and consumer monitoring |
+
+### Data Flow
+
+```text
+                         Angular
+                            |
+                            v
+                       Spring Boot
+                            |
+          +-----------------+------------------+
+          |                 |                  |
+          v                 v                  v
+        Redis         PostgreSQL PL       External APIs
+                           |
+                           | Spock
+                           v
+                     PostgreSQL DE
+
+PostgreSQL / outbox_events
+          |
+          | WAL / CDC
+          v
+Kafka Connect + Debezium
+          |
+          v
+        Kafka
+          |
+     +----+----------------+
+     |                     |
+     v                     v
+Search Projection      Async Consumers
+     |                     |
+     v                     +--> PDF generation
+Elasticsearch               +--> Notifications
+                            |
+                            v
+                          Mailpit
+
+```
+## Infrastructure Responsibilities
+### PostgreSQL
+
+PostgreSQL is the source of truth for durable business data:
+
+- customers
+- lease applications
+- consents
+- assessments
+- documents
+- transactional outbox events
+
+postgres-pl and postgres-de are separate PostgreSQL instances used to
+demonstrate logical replication and eventually active-active replication with
+pgEdge Spock.
+
+### Redis
+
+Redis is used for shared short-lived state and distributed caching.
+
+Example use cases:
+
+- unfinished lease application drafts
+- shared state between stateless Spring Boot instances
+- cached NBP/FX exchange rates
+- TTL-based temporary data
+
+### Kafka
+
+Kafka stores and distributes domain events such as:
+
+- LeaseApplicationSubmitted
+- AssessmentCompleted
+- DocumentGenerated
+- ContractSigned
+
+Ordering is guaranteed within a Kafka partition.
+
+### Debezium / Kafka Connect
+
+Debezium performs Change Data Capture (CDC) from PostgreSQL WAL.
+
+The primary LeaseDemo use case is:
+```text
+PostgreSQL outbox_events
+        |
+        v
+     Debezium
+        |
+        v
+      Kafka
+```
+This allows committed transactional outbox events to be published to Kafka
+without performing a direct dual-write from Spring Boot.
+
+### Elasticsearch
+
+Elasticsearch contains a denormalized search/read model built from regional
+business data.
+
+PostgreSQL remains the source of truth.
+
+Example global search:
+
+PL -> Jan Kowalski -> Fiat Tipo
+DE -> Hans Müller  -> Fiat Tipo
+
+Search: "Fiat Tipo"
+-> results from both regions
+
+### Mailpit
+
+Mailpit provides a local SMTP server and browser inbox for testing asynchronous
+email workflows without sending real email.
+
+### Kafka UI
+
+Kafka UI is used during development and demos to inspect:
+
+- topics
+- partitions
+- messages
+- consumer groups
+- consumer lag
+
+
+
+```md
+## Development Scripts
+
+### Main environment scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/deploy-local.sh` | Starts the LeaseDemo development application: local infrastructure, Spring Boot and Angular |
+| `scripts/infrastructure-start.sh` | Starts Docker infrastructure services |
+| `scripts/infrastructure-stop.sh` | Stops Docker infrastructure services without removing persistent volumes |
+| `scripts/infrastructure-status.sh` | Displays infrastructure container status |
+| `scripts/build.sh` | Builds the project |
+| `scripts/test.sh` | Runs project tests |
+| `scripts/lint.sh` | Runs linting |
+| `scripts/format.sh` | Runs source formatting |
+| `scripts/clean.sh` | Cleans generated/build artifacts |
+| `scripts/deploy-cloud-run.sh` | Cloud Run deployment workflow |
+
+### Database utilities
+
+| Script | Purpose |
+|---|---|
+| `scripts/postgres-reset.sh` | Resets local PostgreSQL data. Destructive operation |
+| `scripts/postgres-seed-local-data.sh` | Loads deterministic local demo/customer data |
+| `scripts/generate-customer-mock-data.py` | Generates deterministic mock Customer data used by local seeding |
+
+### Keycloak utilities
+
+| Script | Purpose |
+|---|---|
+| `scripts/keycloak-logs.sh` | Follows Keycloak container logs |
+
+### Security utilities
+
+| Script | Purpose |
+|---|---|
+| `scripts/lib/local-crypto-keys.sh` | Loads persistent local AES/HMAC keys used for sensitive field protection |
+| `scripts/lib/local-crypto-keys.test.sh` | Tests local crypto-key handling |
+
+### Demo scenarios
+
+| Script | Demonstrates |
+|---|---|
+| `scripts/demo/demo-redis.sh` | Shared lease draft surviving backend instance restart/change |
+| `scripts/demo/demo-redis-fx.sh` | Redis FX cache: cache MISS -> external API -> cache HIT |
+| `scripts/demo/demo-kafka-recovery.sh` | Kafka outage, Debezium backlog recovery and asynchronous processing |
+| `scripts/demo/demo-spock.sh` | PostgreSQL PL <-> DE replication |
+| `scripts/demo/demo-elasticsearch.sh` | Cross-region Elasticsearch search over PL and DE data |
+Jeszcze jedna rzecz
+
+Na samym końcu tej sekcji dałbym też bardzo krótkie:
+
+### Useful Local URLs
+
+- Frontend: http://localhost:4200
+- Backend: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- Keycloak: http://localhost:8081
+- Kafka UI: http://localhost:8090
+- Mailpit: http://localhost:8025
+- Elasticsearch: http://localhost:9200
+
+

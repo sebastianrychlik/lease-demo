@@ -1,0 +1,82 @@
+@use '../../../../../styles/tokens';
+
+.ux-demo {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.ux-demo__section {
+  margin-top: 2.5rem;
+}
+
+.ux-demo__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: tokens.$ld-color-text-primary;
+}
+
+.ux-demo__type-page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: tokens.$ld-color-text-primary;
+}
+
+.ux-demo__type-section-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: tokens.$ld-color-text-primary;
+}
+
+.ux-demo__type-body {
+  margin: 0;
+  font-size: 0.95rem;
+  color: tokens.$ld-color-text-primary;
+}
+
+.ux-demo__type-secondary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: tokens.$ld-color-text-secondary;
+}
+
+.ux-demo__type-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: tokens.$ld-color-text-secondary;
+}
+
+.ux-demo__card-title {
+  font-weight: 600;
+}
+
+.ux-demo__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: tokens.$ld-radius-sm;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: tokens.$ld-color-surface-muted;
+  color: tokens.$ld-color-text-secondary;
+}
+
+.ux-demo__status--active {
+  background-color: rgba(21, 128, 61, 0.1);
+  color: tokens.$ld-color-success;
+}
+
+.ux-demo__status--pending {
+  background-color: rgba(180, 83, 9, 0.1);
+  color: tokens.$ld-color-warning;
+}
+
+.ux-demo__status--closed {
+  background-color: rgba(100, 116, 139, 0.12);
+  color: tokens.$ld-color-text-secondary;
+}

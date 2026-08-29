@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <body>
+    <script>
+      /**
+       * Keycloak silent SSO check page.
+       *
+       * This page is loaded in a hidden iframe by keycloak-js when
+       * onLoad: 'check-sso' is used with silentCheckSsoRedirectUri.
+       * It posts the current href back to the parent window so Keycloak
+       * can determine whether an active SSO session exists — without
+       * performing a full browser redirect.
+       */
+      parent.postMessage(location.href, location.origin);
+    </script>
+  </body>
+</html>

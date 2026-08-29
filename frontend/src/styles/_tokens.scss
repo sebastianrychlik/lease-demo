@@ -1,0 +1,93 @@
+// =============================================================================
+// _tokens.scss — LeaseDemo design tokens
+// =============================================================================
+//
+// SINGLE SOURCE OF TRUTH for LeaseDemo's core visual tokens (colors, radius,
+// shadow). Every other styling mechanism in the frontend must derive from
+// these values rather than re-declaring its own copy:
+//
+//   - Angular Material theme  (src/styles/_material-theme.scss) consumes
+//     these SCSS variables directly to build its palettes.
+//   - Tailwind (tailwind.config.js) does NOT re-declare hex values. Instead
+//     it maps utility color names (e.g. `bg-surface`, `text-secondary`) to
+//     the CSS custom properties emitted below in :root, so `tailwind.config.js`
+//     and this file never drift apart.
+//   - Component SCSS may reference the CSS custom properties (`var(--ld-*)`)
+//     for the rare cases where a small, clearer component-level rule is more
+//     appropriate than a long Tailwind utility chain.
+//
+// Visual direction: conservative corporate banking/leasing. Dark navy/slate
+// primary, white/near-white surfaces, a single restrained accent blue used
+// sparingly (links/focus), calm semantic status colors. No neon, no
+// gradients, no glassmorphism.
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Core palette (SCSS variables — canonical values)
+// ---------------------------------------------------------------------------
+$ld-color-primary: #1e293b; // slate-800 — dark navy/slate corporate primary
+$ld-color-primary-hover: #334155; // slate-700
+$ld-color-accent: #2563eb; // restrained corporate blue accent (links/focus)
+
+$ld-color-surface: #ffffff;
+$ld-color-surface-muted: #f8fafc; // subtle off-white app background / muted panels
+
+$ld-color-border: #e2e8f0;
+
+$ld-color-text-primary: #0f172a;
+$ld-color-text-secondary: #64748b;
+$ld-color-text-on-primary: #ffffff;
+
+$ld-color-success: #15803d;
+$ld-color-warning: #b45309;
+$ld-color-danger: #b91c1c;
+$ld-color-danger-hover: #991b1b;
+
+// ---------------------------------------------------------------------------
+// Shape / elevation
+// ---------------------------------------------------------------------------
+$ld-radius-sm: 4px;
+$ld-radius-md: 6px;
+
+$ld-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+$ld-shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
+
+// ---------------------------------------------------------------------------
+// Typography
+// ---------------------------------------------------------------------------
+$ld-font-family:
+  -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+  Cantarell, 'Helvetica Neue', Arial, sans-serif;
+
+// ---------------------------------------------------------------------------
+// CSS custom properties — the bridge consumed by Tailwind (tailwind.config.js)
+// and any component SCSS that prefers `var(--ld-*)` over a Tailwind utility.
+// Keep this list in lockstep with the SCSS variables above.
+// ---------------------------------------------------------------------------
+:root {
+  --ld-color-primary: #{$ld-color-primary};
+  --ld-color-primary-hover: #{$ld-color-primary-hover};
+  --ld-color-accent: #{$ld-color-accent};
+
+  --ld-color-surface: #{$ld-color-surface};
+  --ld-color-surface-muted: #{$ld-color-surface-muted};
+
+  --ld-color-border: #{$ld-color-border};
+
+  --ld-color-text-primary: #{$ld-color-text-primary};
+  --ld-color-text-secondary: #{$ld-color-text-secondary};
+  --ld-color-text-on-primary: #{$ld-color-text-on-primary};
+
+  --ld-color-success: #{$ld-color-success};
+  --ld-color-warning: #{$ld-color-warning};
+  --ld-color-danger: #{$ld-color-danger};
+  --ld-color-danger-hover: #{$ld-color-danger-hover};
+
+  --ld-radius-sm: #{$ld-radius-sm};
+  --ld-radius-md: #{$ld-radius-md};
+
+  --ld-shadow-sm: #{$ld-shadow-sm};
+  --ld-shadow-md: #{$ld-shadow-md};
+
+  --ld-font-family: #{$ld-font-family};
+}

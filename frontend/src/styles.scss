@@ -1,4 +1,25 @@
-/* Global styles — Lease Demo */
+/* =============================================================================
+ * styles.scss — LeaseDemo global styles
+ * =============================================================================
+ *
+ * Kept intentionally small. Responsibilities:
+ *   - Tailwind CSS layers (utility engine — layout/spacing/sizing/typography
+ *     utilities used across components).
+ *   - Angular Material theme integration (src/styles/_material-theme.scss),
+ *     built from LeaseDemo's canonical design tokens (src/styles/_tokens.scss).
+ *   - Minimal root/body defaults and normalization.
+ *
+ * Component-specific styles belong in each component's own stylesheet, not
+ * here. See docs/milestones/M4_Persistence_and_Lease_Domain.md (§ M4.2) for
+ * the full design-system rationale.
+ * ============================================================================= */
+
+@use 'styles/tokens';
+@use 'styles/material-theme';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Box-sizing reset */
 *,
@@ -13,11 +34,9 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-    'Helvetica Neue', sans-serif;
+  font-family: var(--ld-font-family);
   font-size: 16px;
   line-height: 1.5;
-  color: #212121;
-  background-color: #fafafa;
+  color: var(--ld-color-text-primary);
+  background-color: var(--ld-color-surface-muted);
 }

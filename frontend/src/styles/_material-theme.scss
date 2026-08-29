@@ -1,0 +1,86 @@
+// =============================================================================
+// _material-theme.scss — Angular Material theme integration
+// =============================================================================
+//
+// Angular Material is the primitive/accessibility layer (buttons, form
+// fields, tables, dialogs, etc.). This file gives Material LeaseDemo's own
+// corporate palette instead of shipping Material's default purple/magenta
+// theme.
+//
+// Strategy: Angular Material 18 ships the new Material 3 (M3)
+// `mat.define-theme` API, which is built from a small set of *palette*
+// generator functions (`mat.$blue-palette`, custom hue maps, etc.) — it does
+// NOT accept our own arbitrary hex tokens directly for every slot. Rather
+// than maintaining a second, independent copy of the LeaseDemo palette in
+// M3's hue-map format, we pick the closest neutral/blue M3 palettes for
+// Material's internal chrome (ripples, focus rings, state layers) and then
+// layer the *canonical* LeaseDemo tokens (see _tokens.scss) on top via a
+// small set of CSS custom property overrides that Material's M3 components
+// read (`--mdc-*`, `--mat-*`). This keeps _tokens.scss as the single source
+// of truth for colors that are actually visible (surfaces, primary button
+// color, text), while still using Material's official theming pipeline for
+// everything else (typography scale plumbing, density, state layers).
+// =============================================================================
+
+@use '@angular/material' as mat;
+@use 'tokens' as tokens;
+
+@include mat.core();
+
+// Base M3 theme: closest stock palettes to LeaseDemo's dark slate/blue
+// direction. This drives Material's internal component structure/tokens.
+$ld-material-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: light,
+      primary: mat.$blue-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: (
+      brand-family: tokens.$ld-font-family,
+      plain-family: tokens.$ld-font-family,
+    ),
+    density: (
+      scale: 0,
+    ),
+  )
+);
+
+html {
+  @include mat.all-component-themes($ld-material-theme);
+}
+
+// -----------------------------------------------------------------------
+// Corporate palette override layer.
+//
+// Overrides the small number of Material CSS custom properties that
+// control the *visible* primary/surface colors so they match LeaseDemo's
+// canonical tokens exactly, without hand-maintaining a full M3 hue map.
+// -----------------------------------------------------------------------
+html {
+  --mat-sys-primary: #{tokens.$ld-color-primary};
+  --mat-sys-on-primary: #{tokens.$ld-color-text-on-primary};
+  --mat-sys-primary-container: #{tokens.$ld-color-primary};
+  --mat-sys-on-primary-container: #{tokens.$ld-color-text-on-primary};
+
+  --mat-sys-surface: #{tokens.$ld-color-surface};
+  --mat-sys-on-surface: #{tokens.$ld-color-text-primary};
+  --mat-sys-surface-variant: #{tokens.$ld-color-surface-muted};
+  --mat-sys-on-surface-variant: #{tokens.$ld-color-text-secondary};
+
+  --mat-sys-outline: #{tokens.$ld-color-border};
+  --mat-sys-outline-variant: #{tokens.$ld-color-border};
+
+  --mat-sys-error: #{tokens.$ld-color-danger};
+  --mat-sys-on-error: #{tokens.$ld-color-text-on-primary};
+
+  --mat-sys-corner-small: #{tokens.$ld-radius-sm};
+  --mat-sys-corner-medium: #{tokens.$ld-radius-md};
+
+  --mdc-filled-button-container-color: #{tokens.$ld-color-primary};
+  --mdc-filled-button-label-text-color: #{tokens.$ld-color-text-on-primary};
+  --mdc-outlined-button-outline-color: #{tokens.$ld-color-border};
+  --mdc-outlined-button-label-text-color: #{tokens.$ld-color-primary};
+
+  --mdc-protected-button-container-color: #{tokens.$ld-color-primary};
+}

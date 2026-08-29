@@ -1,0 +1,45 @@
+// LeaseDemo app-button visual styling.
+//
+// Layout/spacing use Tailwind-equivalent values expressed here (rather than
+// Tailwind utility classes) because :host-scoped Material overrides need
+// direct selector access to the projected <button mat-flat-button>. See
+// docs/milestones/M4_Persistence_and_Lease_Domain.md (§ M4.2) for the
+// Material/Tailwind/SCSS division of responsibility.
+@use '../../../../styles/tokens';
+
+.app-button {
+  border-radius: tokens.$ld-radius-sm;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.25;
+  padding-inline: 1.25rem;
+}
+
+.app-button--primary {
+  --mdc-filled-button-container-color: #{tokens.$ld-color-primary};
+  --mdc-filled-button-label-text-color: #{tokens.$ld-color-text-on-primary};
+}
+
+.app-button--primary:not(:disabled):hover {
+  --mdc-filled-button-container-color: #{tokens.$ld-color-primary-hover};
+}
+
+.app-button--secondary {
+  --mdc-filled-button-container-color: #{tokens.$ld-color-surface};
+  --mdc-filled-button-label-text-color: #{tokens.$ld-color-primary};
+  border: 1px solid tokens.$ld-color-border;
+}
+
+.app-button--secondary:not(:disabled):hover {
+  --mdc-filled-button-container-color: #{tokens.$ld-color-surface-muted};
+}
+
+.app-button--danger {
+  --mdc-filled-button-container-color: #{tokens.$ld-color-danger};
+  --mdc-filled-button-label-text-color: #{tokens.$ld-color-text-on-primary};
+}
+
+.app-button--danger:not(:disabled):hover {
+  --mdc-filled-button-container-color: #{tokens.$ld-color-danger-hover};
+}

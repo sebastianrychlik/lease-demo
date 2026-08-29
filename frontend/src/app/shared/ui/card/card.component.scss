@@ -1,0 +1,9 @@
+@use '../../../../styles/tokens';
+
+.app-card {
+  background-color: tokens.$ld-color-surface;
+  border: 1px solid tokens.$ld-color-border;
+  border-radius: tokens.$ld-radius-md;
+  box-shadow: tokens.$ld-shadow-sm;
+  padding: 1.25rem;
+}

@@ -91,3 +91,12 @@ surefire-reports/
 build/
 out/
 .gradle/
+infrastructure/keycloak/data/
+
+# ---------------------------------------------------------------------------
+# Local-only generated mock/seed data (M4.1.3) — never commit synthetic
+# PESEL/customer payloads, even though the data itself is fake.
+# ---------------------------------------------------------------------------
+tmp/
+scripts/tmp/
+*.mock-customers.json

@@ -1,0 +1,11 @@
+<div class="mx-auto flex max-w-xl flex-col gap-6 pt-16">
+  <app-page-header title="Access denied"></app-page-header>
+
+  <app-card>
+    <p class="mb-4">
+      Your account does not have access to the requested LeaseDemo area. If
+      you believe this is incorrect, please contact your administrator.
+    </p>
+    <app-button variant="secondary" (click)="authService.logout()">Logout</app-button>
+  </app-card>
+</div>

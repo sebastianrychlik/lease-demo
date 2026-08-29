@@ -1,0 +1,48 @@
+# Test-scoped override of the "local" profile.
+#
+# Maven puts src/test/resources ahead of src/main/resources on the test
+# classpath, so this file shadows backend/src/main/resources/application-local.yml
+# for all tests activated with @ActiveProfiles("local").
+#
+# WHY THIS EXISTS (M4.0):
+# Introducing spring-boot-starter-data-jpa + Flyway causes Spring Boot to
+# auto-configure a DataSource, Hibernate EntityManagerFactory and a Flyway
+# migration runner. Without this override, the existing @SpringBootTest /
+# @WebMvcTest suite would require a live PostgreSQL instance at
+# localhost:5432, which must NOT be a hard requirement for `mvn test` / CI.
+#
+# This override disables persistence auto-configuration entirely for the
+# test suite. No JPA entities/repositories exist yet (M4.0 is
+# infrastructure-only), so no test currently needs a real or in-memory
+# database. Future milestones (M4.1+) that need real repository/JPA
+# behavior should use a dedicated, explicitly-annotated test (e.g.
+# @DataJpaTest with Testcontainers) rather than relying on this
+# application-wide profile.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+      # M4.1 introduced the first Spring Data JPA repository (CustomerRepository).
+      # Without a real DataSource/EntityManagerFactory in this lightweight
+      # full-context test profile, Spring Data JPA cannot create repository
+      # proxies, so its auto-configuration must also be excluded here.
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/lease-demo
+
+application:
+  cors:
+    allowed-origins: http://localhost:4200
+  crypto:
+    # Fixed test-only keys (never used outside the test suite) — required
+    # because AesGcmEncryptionService/HmacLookupHashService eagerly decode
+    # these at bean-creation time, and this override otherwise strips out
+    # the "local" profile's real (dev-only) key defaults.
+    aes-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    hmac-key: ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=
