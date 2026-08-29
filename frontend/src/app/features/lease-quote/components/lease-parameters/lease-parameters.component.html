@@ -8,8 +8,9 @@
     <mat-form-field appearance="outline" class="lease-parameters__currency">
       <mat-label>Currency</mat-label>
       <mat-select formControlName="currency">
-        <mat-option value="EUR">EUR</mat-option>
-        <mat-option value="PLN">PLN</mat-option>
+        @for (currency of product().currencies; track currency) {
+          <mat-option [value]="currency">{{ currency }}</mat-option>
+        }
       </mat-select>
     </mat-form-field>
   </div>
@@ -19,7 +20,13 @@
       Initial payment
       <span class="lease-parameters__value">{{ formGroup().controls.initialPaymentPercent.value }}%</span>
     </h3>
-    <mat-slider class="lease-parameters__slider" min="0" max="45" step="1" discrete>
+    <mat-slider
+      class="lease-parameters__slider"
+      [min]="product().initialPayment.minPercent"
+      [max]="product().initialPayment.maxPercent"
+      [step]="product().initialPayment.stepPercent"
+      discrete
+    >
       <input matSliderThumb formControlName="initialPaymentPercent" />
     </mat-slider>
   </div>
@@ -27,7 +34,7 @@
   <div class="lease-parameters__section">
     <h3 class="lease-parameters__label">Lease term</h3>
     <mat-button-toggle-group class="lease-parameters__toggle-group" formControlName="termMonths">
-      @for (term of termOptions; track term) {
+      @for (term of product().termsMonths; track term) {
         <mat-button-toggle [value]="term">{{ term }}</mat-button-toggle>
       }
     </mat-button-toggle-group>
@@ -38,7 +45,13 @@
       Buyout
       <span class="lease-parameters__value">{{ formGroup().controls.buyoutPercent.value }}%</span>
     </h3>
-    <mat-slider class="lease-parameters__slider" min="1" max="40" step="1" discrete>
+    <mat-slider
+      class="lease-parameters__slider"
+      [min]="product().buyout.minPercent"
+      [max]="product().buyout.maxPercent"
+      [step]="product().buyout.stepPercent"
+      discrete
+    >
       <input matSliderThumb formControlName="buyoutPercent" />
     </mat-slider>
   </div>
@@ -46,8 +59,9 @@
   <div class="lease-parameters__section">
     <h3 class="lease-parameters__label">Lease type</h3>
     <mat-button-toggle-group class="lease-parameters__toggle-group" formControlName="leaseType">
-      <mat-button-toggle value="OPERATING">Operating</mat-button-toggle>
-      <mat-button-toggle value="FINANCIAL">Financial</mat-button-toggle>
+      @for (leaseType of product().leaseTypes; track leaseType.type) {
+        <mat-button-toggle [value]="leaseType.type">{{ leaseType.type | titlecase }}</mat-button-toggle>
+      }
     </mat-button-toggle-group>
   </div>
 </form>

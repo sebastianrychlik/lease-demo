@@ -2,13 +2,29 @@
   <app-page-header title="Lease Quote Simulator" subtitle="Vehicle financing demo — live estimate, updates as you type">
   </app-page-header>
 
-  <div class="lease-quote-page">
-    <app-card class="lease-quote-page__parameters">
-      <app-lease-parameters [formGroup]="form" />
-    </app-card>
+  @if (productConfigState(); as state) {
+    @if (state.status === 'loading') {
+      <app-card class="lease-quote-page__status">
+        <p>Loading leasing products…</p>
+      </app-card>
+    } @else if (state.status === 'empty') {
+      <app-card class="lease-quote-page__status">
+        <p>No leasing products are currently available.</p>
+      </app-card>
+    } @else if (state.status === 'error') {
+      <app-card class="lease-quote-page__status">
+        <p>Leasing product configuration is currently unavailable. Please try again shortly.</p>
+      </app-card>
+    } @else if (state.status === 'ready') {
+      <div class="lease-quote-page">
+        <app-card class="lease-quote-page__parameters">
+          <app-lease-parameters [formGroup]="form" [product]="state.product" />
+        </app-card>
 
-    <app-card class="lease-quote-page__summary">
-      <app-quote-summary [viewState]="viewState()" />
-    </app-card>
-  </div>
+        <app-card class="lease-quote-page__summary">
+          <app-quote-summary [viewState]="viewState()" />
+        </app-card>
+      </div>
+    }
+  }
 </div>

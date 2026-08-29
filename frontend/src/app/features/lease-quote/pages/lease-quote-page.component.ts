@@ -7,12 +7,14 @@ import {
   catchError,
   debounceTime,
   distinctUntilChanged,
+  filter,
   map,
   Observable,
   of,
   shareReplay,
   startWith,
   switchMap,
+  tap,
 } from 'rxjs';
 
 import { CardComponent, PageHeaderComponent } from '../../../shared/ui';
@@ -20,21 +22,30 @@ import { LeaseParametersComponent } from '../components/lease-parameters/lease-p
 import { QuoteSummaryComponent, QuoteSummaryViewState } from '../components/quote-summary/quote-summary.component';
 import {
   LeaseCurrency,
+  LeaseProductConfiguration,
   LeaseQuoteRequest,
-  LeaseTermMonths,
   LeaseType,
+  PercentageRangeConfiguration,
 } from '../models/lease-quote.model';
+import { LeaseProductService } from '../services/lease-product.service';
 import { LeaseQuoteService } from '../services/lease-quote.service';
 
 /** Typed reactive-form controls for the Lease Quote Simulator. */
 export interface LeaseQuoteFormControls {
   vehiclePrice: FormControl<number>;
   currency: FormControl<LeaseCurrency>;
-  termMonths: FormControl<LeaseTermMonths>;
+  termMonths: FormControl<number>;
   initialPaymentPercent: FormControl<number>;
   buyoutPercent: FormControl<number>;
   leaseType: FormControl<LeaseType>;
 }
+
+/** Discriminated union representing the Lease Product configuration load state. */
+export type ProductConfigViewState =
+  | { status: 'loading' }
+  | { status: 'empty' }
+  | { status: 'error' }
+  | { status: 'ready'; product: LeaseProductConfiguration };
 
 /** Debounce window for live recalculation — kept short so the UI feels alive. */
 const RECALCULATION_DEBOUNCE_MS = 200;
@@ -69,19 +80,57 @@ const RECALCULATION_DEBOUNCE_MS = 200;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LeaseQuotePageComponent {
+  private readonly leaseProductService = inject(LeaseProductService);
   private readonly leaseQuoteService = inject(LeaseQuoteService);
 
+  /**
+   * Form is constructed eagerly with placeholder values; every value is
+   * synchronized to the selected product's defaults/ranges as soon as
+   * product configuration arrives (see {@link syncFormToProduct}), so no
+   * invalid/hard-coded business value is ever actually submitted.
+   */
   readonly form = new FormGroup<LeaseQuoteFormControls>({
     vehiclePrice: new FormControl(45000, {
       nonNullable: true,
       validators: [Validators.required, Validators.min(1)],
     }),
     currency: new FormControl<LeaseCurrency>('EUR', { nonNullable: true }),
-    termMonths: new FormControl<LeaseTermMonths>(36, { nonNullable: true }),
+    termMonths: new FormControl(36, { nonNullable: true }),
     initialPaymentPercent: new FormControl(20, { nonNullable: true }),
     buyoutPercent: new FormControl(15, { nonNullable: true }),
     leaseType: new FormControl<LeaseType>('OPERATING', { nonNullable: true }),
   });
+
+  /**
+   * Lease Product configuration load state — loading / empty / error /
+   * ready. A single subscription (via `shareReplay`) drives both the
+   * empty/error UI state and the one-time form synchronization side
+   * effect below, so the underlying HTTP call happens exactly once.
+   */
+  private readonly productConfigState$: Observable<ProductConfigViewState> = this.leaseProductService.availableProducts$.pipe(
+    map((products): ProductConfigViewState =>
+      products.length === 0 ? { status: 'empty' } : { status: 'ready', product: products[0] },
+    ),
+    tap((state) => {
+      if (state.status === 'ready') {
+        this.syncFormToProduct(state.product);
+      }
+    }),
+    startWith<ProductConfigViewState>({ status: 'loading' }),
+    catchError(() => of<ProductConfigViewState>({ status: 'error' })),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
+  readonly productConfigState = toSignal(this.productConfigState$, {
+    initialValue: { status: 'loading' } as ProductConfigViewState,
+  });
+
+  /** Only emits once product configuration has successfully loaded — gates the quote request stream. */
+  private readonly selectedProduct$ = this.productConfigState$.pipe(
+    filter((state): state is { status: 'ready'; product: LeaseProductConfiguration } => state.status === 'ready'),
+    map((state) => state.product),
+    distinctUntilChanged((a, b) => a.code === b.code),
+  );
 
   private readonly vehiclePrice$ = this.form.controls.vehiclePrice.valueChanges.pipe(
     startWith(this.form.controls.vehiclePrice.value),
@@ -120,6 +169,7 @@ export class LeaseQuotePageComponent {
    * in the template so no manual `.subscribe()` is needed.
    */
   private readonly viewState$: Observable<QuoteSummaryViewState> = combineLatest([
+    this.selectedProduct$,
     this.vehiclePrice$,
     this.currency$,
     this.termMonths$,
@@ -129,7 +179,8 @@ export class LeaseQuotePageComponent {
   ]).pipe(
     debounceTime(RECALCULATION_DEBOUNCE_MS),
     map(
-      ([vehiclePrice, currency, termMonths, initialPaymentPercent, buyoutPercent, leaseType]): LeaseQuoteRequest => ({
+      ([product, vehiclePrice, currency, termMonths, initialPaymentPercent, buyoutPercent, leaseType]): LeaseQuoteRequest => ({
+        productCode: product.code,
         vehiclePrice,
         currency,
         termMonths,
@@ -153,6 +204,35 @@ export class LeaseQuotePageComponent {
   readonly viewState = toSignal(this.viewState$, {
     initialValue: { status: 'loading' } as QuoteSummaryViewState,
   });
+
+  /**
+   * Ensures the form never carries a value the selected product does not
+   * offer (M5.1.2 §24): any control whose current value is not part of
+   * the new product's options/range is reset to that product's default.
+   */
+  private syncFormToProduct(product: LeaseProductConfiguration): void {
+    const controls = this.form.controls;
+
+    if (!product.currencies.includes(controls.currency.value)) {
+      controls.currency.setValue(product.defaultCurrency);
+    }
+    if (!product.termsMonths.includes(controls.termMonths.value)) {
+      controls.termMonths.setValue(product.defaultTermMonths);
+    }
+    if (!isWithinRange(controls.initialPaymentPercent.value, product.initialPayment)) {
+      controls.initialPaymentPercent.setValue(product.initialPayment.defaultPercent);
+    }
+    if (!isWithinRange(controls.buyoutPercent.value, product.buyout)) {
+      controls.buyoutPercent.setValue(product.buyout.defaultPercent);
+    }
+    if (!product.leaseTypes.some((leaseType) => leaseType.type === controls.leaseType.value)) {
+      controls.leaseType.setValue(product.defaultLeaseType);
+    }
+  }
+}
+
+function isWithinRange(value: number, range: PercentageRangeConfiguration): boolean {
+  return value >= range.minPercent && value <= range.maxPercent;
 }
 
 /** Maps a backend error into a safe, user-facing message. */

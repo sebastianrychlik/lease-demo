@@ -21,3 +21,11 @@ management:
 
 application:
   version: 0.1.0
+
+leasedemo:
+  lease:
+    # Current business market resolution (M5.1.2). NOT supplied by
+    # Angular — the backend is the sole authority. Will later resolve
+    # from the authenticated Customer's market instead of this static
+    # property, without changing the Lease Product API contract.
+    default-market: PL

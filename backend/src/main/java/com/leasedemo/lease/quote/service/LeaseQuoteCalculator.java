@@ -1,12 +1,10 @@
 package com.leasedemo.lease.quote.service;
 
-import com.leasedemo.lease.quote.model.LeaseType;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.util.Map;
 
 /**
  * Deterministic demo lease-calculation engine.
@@ -18,26 +16,18 @@ import java.util.Map;
  * decimal places (PLN convention).
  *
  * <p>This class contains only the arithmetic — it has no knowledge of NBP,
- * HTTP, or DTOs, so it stays easy to unit test and easy to move to
- * configuration later (M5.2+).
+ * HTTP, DTOs, JPA, or the current market. The annual rate is no longer a
+ * hard-coded per-{@code LeaseType} map here: it is resolved from the
+ * selected {@code LeaseProduct} configuration (M5.1.2) and passed in as a
+ * plain parameter, keeping this class independent of persistence.
  */
 @Component
 public class LeaseQuoteCalculator {
-
-    /** Demo nominal annual interest rates per lease type. Move to configuration when needed. */
-    private static final Map<LeaseType, BigDecimal> ANNUAL_RATE_PERCENT = Map.of(
-            LeaseType.OPERATING, new BigDecimal("7.20"),
-            LeaseType.FINANCIAL, new BigDecimal("6.90")
-    );
 
     private static final BigDecimal VAT_DIVISOR = new BigDecimal("1.23");
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final int MONEY_SCALE = 2;
     private static final MathContext MATH_CONTEXT = new MathContext(20, RoundingMode.HALF_UP);
-
-    public BigDecimal annualRatePercent(LeaseType leaseType) {
-        return ANNUAL_RATE_PERCENT.get(leaseType);
-    }
 
     /** Result of the demo lease calculation, all amounts already rounded to 2 decimal places. */
     public record Result(
@@ -55,20 +45,18 @@ public class LeaseQuoteCalculator {
      * Runs the demo lease calculation described in the M5.1 specification.
      *
      * @param vehiclePricePln        vehicle price already converted to PLN
-     * @param initialPaymentPercent  0..45
-     * @param buyoutPercent          1..40
-     * @param termMonths             one of 24, 36, 48, 60
-     * @param leaseType              OPERATING or FINANCIAL
+     * @param initialPaymentPercent  within the selected product's allowed range
+     * @param buyoutPercent          within the selected product's allowed range
+     * @param termMonths             one of the selected product's offered terms
+     * @param annualRatePercent      resolved from the selected product's lease-type configuration
      */
     public Result calculate(
             BigDecimal vehiclePricePln,
             BigDecimal initialPaymentPercent,
             BigDecimal buyoutPercent,
             int termMonths,
-            LeaseType leaseType
+            BigDecimal annualRatePercent
     ) {
-        BigDecimal annualRatePercent = annualRatePercent(leaseType);
-
         BigDecimal initialPaymentPln = vehiclePricePln
                 .multiply(initialPaymentPercent, MATH_CONTEXT)
                 .divide(ONE_HUNDRED, MATH_CONTEXT);

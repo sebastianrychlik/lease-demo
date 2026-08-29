@@ -12,6 +12,9 @@ import java.math.BigDecimal;
  * frontend remains presentation-only and never re-derives the calculation.
  */
 public record LeaseQuoteResponse(
+        String productCode,
+        String productName,
+
         BigDecimal vehiclePriceOriginal,
         LeaseCurrency currency,
         BigDecimal exchangeRate,
