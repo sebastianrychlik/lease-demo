@@ -117,6 +117,10 @@
       "empty": "Obecnie brak dostępnych produktów leasingowych.",
       "error": "Konfiguracja produktu leasingowego jest obecnie niedostępna. Spróbuj ponownie za chwilę."
     },
+    "product": {
+      "label": "Produkt leasingowy",
+      "none": "Brak dostępnych produktów leasingowych"
+    },
     "fields": {
       "vehiclePrice": "Cena pojazdu",
       "currency": "Waluta",

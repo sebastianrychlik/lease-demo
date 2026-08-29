@@ -3,6 +3,14 @@
 // Feature-local composition only (two-panel parameters/summary grid).
 // Application shell (header/sidebar) and page content width (.ld-page) are
 // owned elsewhere — see CustomerLayout and src/styles.scss § M5.1.1.
+.lease-quote-page__product {
+  margin-bottom: tokens.$ld-section-gap;
+
+  .app-select {
+    max-width: 360px;
+  }
+}
+
 .lease-quote-page {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);

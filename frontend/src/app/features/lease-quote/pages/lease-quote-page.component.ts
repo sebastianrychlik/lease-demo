@@ -19,7 +19,7 @@ import {
 } from 'rxjs';
 
 import { LanguageService } from '../../../core/i18n/language.service';
-import { CardComponent, PageHeaderComponent } from '../../../shared/ui';
+import { AppSelectOption, CardComponent, PageHeaderComponent, SelectComponent } from '../../../shared/ui';
 import { LeaseParametersComponent } from '../components/lease-parameters/lease-parameters.component';
 import { QuoteSummaryComponent, QuoteSummaryViewState } from '../components/quote-summary/quote-summary.component';
 import {
@@ -47,7 +47,7 @@ export type ProductConfigViewState =
   | { status: 'loading' }
   | { status: 'empty' }
   | { status: 'error' }
-  | { status: 'ready'; product: LeaseProductConfiguration };
+  | { status: 'ready'; product: LeaseProductConfiguration; products: LeaseProductConfiguration[] };
 
 /** Debounce window for live recalculation — kept short so the UI feels alive. */
 const RECALCULATION_DEBOUNCE_MS = 200;
@@ -74,6 +74,7 @@ const RECALCULATION_DEBOUNCE_MS = 200;
     ReactiveFormsModule,
     PageHeaderComponent,
     CardComponent,
+    SelectComponent,
     LeaseParametersComponent,
     QuoteSummaryComponent,
     TranslocoModule,
@@ -110,17 +111,44 @@ export class LeaseQuotePageComponent {
   });
 
   /**
-   * Lease Product configuration load state — loading / empty / error /
-   * ready. A single subscription (via `shareReplay`) drives both the
-   * empty/error UI state and the one-time form synchronization side
-   * effect below, so the underlying HTTP call happens exactly once.
+   * Explicit CUSTOMER Lease Product selection (M5.1.5) — the single source
+   * of truth for "which product is selected". Standalone (not part of
+   * `form`) since it drives product-dependent form *configuration* rather
+   * than being a quote input itself. `null` until the first product list
+   * arrives, at which point the derivation below deterministically selects
+   * the first backend-returned product.
    */
-  private readonly productConfigState$: Observable<ProductConfigViewState> = this.leaseProductService.availableProducts$.pipe(
-    map((products): ProductConfigViewState =>
-      products.length === 0 ? { status: 'empty' } : { status: 'ready', product: products[0] },
-    ),
+  readonly productControl = new FormControl<string | null>(null);
+
+  /**
+   * Lease Product configuration load state — loading / empty / error /
+   * ready. Combines the shared `availableProducts$` cache with the
+   * CUSTOMER's `productControl` selection (no nested subscriptions) to
+   * derive the currently selected product by `code` — never by array
+   * index. A single subscription (via `shareReplay`) drives the
+   * empty/error UI state, the product selector options, and the
+   * form-normalization side effect below, so the underlying HTTP call
+   * happens exactly once regardless of how many times the product changes.
+   */
+  private readonly productConfigState$: Observable<ProductConfigViewState> = combineLatest([
+    this.leaseProductService.availableProducts$,
+    this.productControl.valueChanges.pipe(startWith(this.productControl.value), distinctUntilChanged()),
+  ]).pipe(
+    map(([products, selectedCode]): ProductConfigViewState => {
+      if (products.length === 0) {
+        return { status: 'empty' };
+      }
+      const product = products.find((candidate) => candidate.code === selectedCode) ?? products[0];
+      return { status: 'ready', product, products };
+    }),
     tap((state) => {
       if (state.status === 'ready') {
+        // Reflect the deterministic initial selection (or a code that no
+        // longer exists) back onto the control without re-triggering this
+        // stream — keeps the selector visibly in sync with actual state.
+        if (this.productControl.value !== state.product.code) {
+          this.productControl.setValue(state.product.code, { emitEvent: false });
+        }
         this.syncFormToProduct(state.product);
       }
     }),
@@ -133,9 +161,21 @@ export class LeaseQuotePageComponent {
     initialValue: { status: 'loading' } as ProductConfigViewState,
   });
 
+  /** Options for the CUSTOMER product selector — `product.code` is the value, `product.name` the label (never Transloco-translated). */
+  readonly productOptions = toSignal(
+    this.productConfigState$.pipe(
+      filter((state): state is { status: 'ready'; product: LeaseProductConfiguration; products: LeaseProductConfiguration[] } => state.status === 'ready'),
+      map((state): AppSelectOption<string>[] => state.products.map((product) => ({ value: product.code, label: product.name }))),
+      distinctUntilChanged(
+        (a, b) => a.length === b.length && a.every((option, index) => option.value === b[index].value && option.label === b[index].label),
+      ),
+    ),
+    { initialValue: [] as AppSelectOption<string>[] },
+  );
+
   /** Only emits once product configuration has successfully loaded — gates the quote request stream. */
   private readonly selectedProduct$ = this.productConfigState$.pipe(
-    filter((state): state is { status: 'ready'; product: LeaseProductConfiguration } => state.status === 'ready'),
+    filter((state): state is { status: 'ready'; product: LeaseProductConfiguration; products: LeaseProductConfiguration[] } => state.status === 'ready'),
     map((state) => state.product),
     distinctUntilChanged((a, b) => a.code === b.code),
   );

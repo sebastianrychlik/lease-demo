@@ -117,6 +117,10 @@
       "empty": "No leasing products are currently available.",
       "error": "Leasing product configuration is currently unavailable. Please try again shortly."
     },
+    "product": {
+      "label": "Lease product",
+      "none": "No lease products available"
+    },
     "fields": {
       "vehiclePrice": "Vehicle price",
       "currency": "Currency",

@@ -16,6 +16,14 @@
         <p>{{ 'leaseQuote.status.error' | transloco }}</p>
       </app-card>
     } @else if (state.status === 'ready') {
+      <app-card class="lease-quote-page__product">
+        <app-select
+          [label]="'leaseQuote.product.label' | transloco"
+          [options]="productOptions()"
+          [formControl]="productControl"
+        />
+      </app-card>
+
       <div class="lease-quote-page">
         <app-card class="lease-quote-page__parameters">
           <app-lease-parameters [formGroup]="form" [product]="state.product" />
