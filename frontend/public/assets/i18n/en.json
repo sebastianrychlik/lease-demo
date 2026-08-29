@@ -71,7 +71,7 @@
       "calculating": "Calculating your quote…",
       "errorTitle": "Unable to calculate a quote right now.",
       "monthlyPayment": "Estimated monthly payment",
-      "exchangeRate": "NBP {{currency}}/PLN",
+      "exchangeRate": "NBP {{source}}/{{target}}",
       "exchangeRateDate": "NBP rate date",
       "vehicleValue": "Vehicle value",
       "financedAmount": "Financed amount",

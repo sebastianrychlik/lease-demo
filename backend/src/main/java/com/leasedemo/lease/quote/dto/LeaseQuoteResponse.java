@@ -16,26 +16,35 @@ public record LeaseQuoteResponse(
         String productName,
 
         BigDecimal vehiclePriceOriginal,
-        LeaseCurrency currency,
+        LeaseCurrency vehiclePriceCurrency,
+
+        /** Resolved from the selected {@code LeaseProduct} — never client-supplied (M5.1.3.2). */
+        LeaseCurrency settlementCurrency,
+
+        /**
+         * Amount of {@code settlementCurrency} for ONE unit of
+         * {@code vehiclePriceCurrency}. {@code 1} when
+         * {@code vehiclePriceCurrency == settlementCurrency}.
+         */
         BigDecimal exchangeRate,
-        /** Effective date of the NBP rate used, or {@code null} for PLN (no NBP lookup performed). */
+        /** Effective date of the NBP rate used, or {@code null} when no NBP lookup was performed (same-currency). */
         String exchangeRateDate,
-        BigDecimal vehiclePricePln,
+        BigDecimal vehiclePriceSettlement,
 
         Integer termMonths,
 
         BigDecimal initialPaymentPercent,
-        BigDecimal initialPaymentPln,
+        BigDecimal initialPayment,
 
         BigDecimal buyoutPercent,
-        BigDecimal buyoutPln,
+        BigDecimal buyout,
 
         LeaseType leaseType,
         BigDecimal annualRatePercent,
 
-        BigDecimal financedAmountPln,
-        BigDecimal monthlyPaymentPln,
-        BigDecimal totalLeaseCostPln,
-        BigDecimal estimatedVatPln
+        BigDecimal financedAmount,
+        BigDecimal monthlyPayment,
+        BigDecimal totalLeaseCost,
+        BigDecimal estimatedVat
 ) {
 }

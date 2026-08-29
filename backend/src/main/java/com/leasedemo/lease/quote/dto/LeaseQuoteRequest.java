@@ -33,7 +33,7 @@ public record LeaseQuoteRequest(
 
         @NotNull
         @Schema(description = "Currency of vehiclePrice — must be offered by the selected product", example = "EUR")
-        LeaseCurrency currency,
+        LeaseCurrency vehiclePriceCurrency,
 
         @NotNull
         @Schema(description = "Lease term in months — must be offered by the selected product", example = "36")

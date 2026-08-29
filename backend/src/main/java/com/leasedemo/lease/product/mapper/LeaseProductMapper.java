@@ -26,6 +26,7 @@ public class LeaseProductMapper {
                 product.getCurrencies().stream()
                         .sorted(Comparator.comparing(Enum::name))
                         .toList(),
+                product.getSettlementCurrency(),
                 product.getTermsMonths().stream()
                         .sorted()
                         .toList(),

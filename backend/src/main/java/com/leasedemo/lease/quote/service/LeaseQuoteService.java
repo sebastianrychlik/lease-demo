@@ -11,16 +11,20 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Orchestrates the M5.1 / M5.1.2 lease quote calculation.
+ * Orchestrates the M5.1 / M5.1.2 / M5.1.3.2 lease quote calculation.
  *
  * <p>Responsibilities:
  * <ul>
  *   <li>Load and validate the selected {@link LeaseProduct} via
  *       {@link LeaseProductService} — the backend, never Angular, is the
  *       authority on whether the requested options are valid.</li>
- *   <li>Resolve the PLN exchange rate via {@link LeaseQuoteExchangeRateResolver}
+ *   <li>Read the product's {@code settlementCurrency} — never accepted
+ *       from the client (M5.1.3.2 §9).</li>
+ *   <li>Resolve the exchange rate from the request's
+ *       {@code vehiclePriceCurrency} to the product's
+ *       {@code settlementCurrency} via {@link LeaseQuoteExchangeRateResolver}
  *       (which reuses the existing NBP integration).</li>
- *   <li>Convert the vehicle price to PLN.</li>
+ *   <li>Convert the vehicle price into the settlement currency.</li>
  *   <li>Delegate the deterministic financial calculation to
  *       {@link LeaseQuoteCalculator}, passing in the product-resolved APR.</li>
  *   <li>Assemble the typed {@link LeaseQuoteResponse}.</li>
@@ -51,22 +55,24 @@ public class LeaseQuoteService {
 
         BigDecimal annualRatePercent = leaseProductService.validateAndResolveAnnualRate(
                 product,
-                request.currency(),
+                request.vehiclePriceCurrency(),
                 request.termMonths(),
                 request.initialPaymentPercent(),
                 request.buyoutPercent(),
                 request.leaseType()
         );
 
-        LeaseCurrency currency = request.currency();
-        LeaseQuoteExchangeRateResolver.ResolvedRate resolvedRate = exchangeRateResolver.resolve(currency);
+        LeaseCurrency vehiclePriceCurrency = request.vehiclePriceCurrency();
+        LeaseCurrency settlementCurrency = product.getSettlementCurrency();
+        LeaseQuoteExchangeRateResolver.ResolvedRate resolvedRate =
+                exchangeRateResolver.resolve(vehiclePriceCurrency, settlementCurrency);
 
-        BigDecimal vehiclePricePln = request.vehiclePrice()
+        BigDecimal vehiclePriceSettlement = request.vehiclePrice()
                 .multiply(resolvedRate.rate())
                 .setScale(2, RoundingMode.HALF_UP);
 
         LeaseQuoteCalculator.Result result = calculator.calculate(
-                vehiclePricePln,
+                vehiclePriceSettlement,
                 request.initialPaymentPercent(),
                 request.buyoutPercent(),
                 request.termMonths(),
@@ -77,21 +83,22 @@ public class LeaseQuoteService {
                 product.getCode(),
                 product.getName(),
                 request.vehiclePrice(),
-                currency,
+                vehiclePriceCurrency,
+                settlementCurrency,
                 resolvedRate.rate(),
                 resolvedRate.effectiveDate(),
-                result.vehiclePricePln(),
+                result.vehiclePrice(),
                 request.termMonths(),
                 request.initialPaymentPercent(),
-                result.initialPaymentPln(),
+                result.initialPayment(),
                 request.buyoutPercent(),
-                result.buyoutPln(),
+                result.buyout(),
                 request.leaseType(),
                 annualRatePercent,
-                result.financedAmountPln(),
-                result.monthlyPaymentPln(),
-                result.totalLeaseCostPln(),
-                result.estimatedVatPln()
+                result.financedAmount(),
+                result.monthlyPayment(),
+                result.totalLeaseCost(),
+                result.estimatedVat()
         );
     }
 }

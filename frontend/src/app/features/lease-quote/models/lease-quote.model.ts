@@ -35,6 +35,12 @@ export interface LeaseProductConfiguration {
   market: string;
 
   currencies: LeaseCurrency[];
+  /**
+   * The currency in which this product's lease amounts are calculated and
+   * settled (M5.1.3.2). Distinct from `currencies` (accepted VEHICLE PRICE
+   * currencies). Backend-owned — never derived on the frontend.
+   */
+  settlementCurrency: LeaseCurrency;
   termsMonths: number[];
 
   initialPayment: PercentageRangeConfiguration;
@@ -58,7 +64,7 @@ export interface LeaseProductConfiguration {
 export interface LeaseQuoteRequest {
   productCode: string;
   vehiclePrice: number;
-  currency: LeaseCurrency;
+  vehiclePriceCurrency: LeaseCurrency;
   termMonths: number;
   initialPaymentPercent: number;
   buyoutPercent: number;
@@ -70,30 +76,39 @@ export interface LeaseQuoteRequest {
  *
  * Maps to the backend `LeaseQuoteResponse`. Angular renders these values
  * as-is and never re-derives or duplicates the calculation.
+ *
+ * Currency-neutral (M5.1.3.2): `settlementCurrency` is resolved entirely by
+ * the backend from the selected Lease Product — the frontend never sends
+ * or derives it — and every monetary amount below is expressed in that
+ * settlement currency.
  */
 export interface LeaseQuoteResponse {
   productCode: string;
   productName: string;
 
   vehiclePriceOriginal: number;
-  currency: LeaseCurrency;
+  vehiclePriceCurrency: LeaseCurrency;
+
+  settlementCurrency: LeaseCurrency;
+
+  /** Amount of settlementCurrency for ONE unit of vehiclePriceCurrency. `1` when currencies match. */
   exchangeRate: number;
   exchangeRateDate: string | null;
-  vehiclePricePln: number;
+  vehiclePriceSettlement: number;
 
   termMonths: number;
 
   initialPaymentPercent: number;
-  initialPaymentPln: number;
+  initialPayment: number;
 
   buyoutPercent: number;
-  buyoutPln: number;
+  buyout: number;
 
   leaseType: LeaseType;
   annualRatePercent: number;
 
-  financedAmountPln: number;
-  monthlyPaymentPln: number;
-  totalLeaseCostPln: number;
-  estimatedVatPln: number;
+  financedAmount: number;
+  monthlyPayment: number;
+  totalLeaseCost: number;
+  estimatedVat: number;
 }

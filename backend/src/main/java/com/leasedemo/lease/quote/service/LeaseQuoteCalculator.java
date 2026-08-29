@@ -31,41 +31,45 @@ public class LeaseQuoteCalculator {
 
     /** Result of the demo lease calculation, all amounts already rounded to 2 decimal places. */
     public record Result(
-            BigDecimal vehiclePricePln,
-            BigDecimal initialPaymentPln,
-            BigDecimal buyoutPln,
-            BigDecimal financedAmountPln,
-            BigDecimal monthlyPaymentPln,
-            BigDecimal totalLeaseCostPln,
-            BigDecimal estimatedVatPln
+            BigDecimal vehiclePrice,
+            BigDecimal initialPayment,
+            BigDecimal buyout,
+            BigDecimal financedAmount,
+            BigDecimal monthlyPayment,
+            BigDecimal totalLeaseCost,
+            BigDecimal estimatedVat
     ) {
     }
 
     /**
      * Runs the demo lease calculation described in the M5.1 specification.
      *
-     * @param vehiclePricePln        vehicle price already converted to PLN
+     * <p>Currency-neutral (M5.1.3.2): every amount here is expressed in a
+     * single settlement currency already resolved by the caller — this
+     * class has no knowledge of which currency that is, NBP, JPA, or HTTP.
+     *
+     * @param vehiclePrice           vehicle price already converted to the settlement currency
      * @param initialPaymentPercent  within the selected product's allowed range
      * @param buyoutPercent          within the selected product's allowed range
      * @param termMonths             one of the selected product's offered terms
      * @param annualRatePercent      resolved from the selected product's lease-type configuration
      */
     public Result calculate(
-            BigDecimal vehiclePricePln,
+            BigDecimal vehiclePrice,
             BigDecimal initialPaymentPercent,
             BigDecimal buyoutPercent,
             int termMonths,
             BigDecimal annualRatePercent
     ) {
-        BigDecimal initialPaymentPln = vehiclePricePln
+        BigDecimal initialPayment = vehiclePrice
                 .multiply(initialPaymentPercent, MATH_CONTEXT)
                 .divide(ONE_HUNDRED, MATH_CONTEXT);
 
-        BigDecimal buyoutPln = vehiclePricePln
+        BigDecimal buyout = vehiclePrice
                 .multiply(buyoutPercent, MATH_CONTEXT)
                 .divide(ONE_HUNDRED, MATH_CONTEXT);
 
-        BigDecimal amountAfterInitialPayment = vehiclePricePln.subtract(initialPaymentPln);
+        BigDecimal amountAfterInitialPayment = vehiclePrice.subtract(initialPayment);
 
         BigDecimal monthlyRate = annualRatePercent
                 .divide(new BigDecimal("12"), MATH_CONTEXT)
@@ -74,7 +78,7 @@ public class LeaseQuoteCalculator {
         BigDecimal onePlusMonthlyRate = BigDecimal.ONE.add(monthlyRate, MATH_CONTEXT);
         BigDecimal growthFactor = onePlusMonthlyRate.pow(termMonths, MATH_CONTEXT);
 
-        BigDecimal presentValueOfBuyout = buyoutPln.divide(growthFactor, MATH_CONTEXT);
+        BigDecimal presentValueOfBuyout = buyout.divide(growthFactor, MATH_CONTEXT);
 
         BigDecimal amortizedAmount = amountAfterInitialPayment.subtract(presentValueOfBuyout);
         if (amortizedAmount.signum() < 0) {
@@ -87,34 +91,34 @@ public class LeaseQuoteCalculator {
         BigDecimal negativeExponentFactor = BigDecimal.ONE.divide(growthFactor, MATH_CONTEXT);
         BigDecimal denominator = BigDecimal.ONE.subtract(negativeExponentFactor, MATH_CONTEXT);
 
-        BigDecimal monthlyPayment;
+        BigDecimal computedMonthlyPayment;
         if (denominator.compareTo(BigDecimal.ZERO) <= 0) {
             // Defensive fallback — should not occur for a positive monthlyRate/termMonths,
             // but protects the calculation from division by zero / negative results.
-            monthlyPayment = BigDecimal.ZERO;
+            computedMonthlyPayment = BigDecimal.ZERO;
         } else {
-            monthlyPayment = amortizedAmount
+            computedMonthlyPayment = amortizedAmount
                     .multiply(monthlyRate, MATH_CONTEXT)
                     .divide(denominator, MATH_CONTEXT);
         }
-        if (monthlyPayment.signum() < 0) {
-            monthlyPayment = BigDecimal.ZERO;
+        if (computedMonthlyPayment.signum() < 0) {
+            computedMonthlyPayment = BigDecimal.ZERO;
         }
 
-        BigDecimal totalLeaseCost = initialPaymentPln
-                .add(monthlyPayment.multiply(BigDecimal.valueOf(termMonths), MATH_CONTEXT))
-                .add(buyoutPln);
+        BigDecimal computedTotalLeaseCost = initialPayment
+                .add(computedMonthlyPayment.multiply(BigDecimal.valueOf(termMonths), MATH_CONTEXT))
+                .add(buyout);
 
-        BigDecimal estimatedVat = totalLeaseCost.subtract(totalLeaseCost.divide(VAT_DIVISOR, MATH_CONTEXT));
+        BigDecimal computedEstimatedVat = computedTotalLeaseCost.subtract(computedTotalLeaseCost.divide(VAT_DIVISOR, MATH_CONTEXT));
 
         return new Result(
-                round(vehiclePricePln),
-                round(initialPaymentPln),
-                round(buyoutPln),
+                round(vehiclePrice),
+                round(initialPayment),
+                round(buyout),
                 round(amountAfterInitialPayment),
-                round(monthlyPayment),
-                round(totalLeaseCost),
-                round(estimatedVat)
+                round(computedMonthlyPayment),
+                round(computedTotalLeaseCost),
+                round(computedEstimatedVat)
         );
     }
 

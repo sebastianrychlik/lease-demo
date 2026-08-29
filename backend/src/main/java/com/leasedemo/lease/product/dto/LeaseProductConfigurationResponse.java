@@ -18,6 +18,7 @@ public record LeaseProductConfigurationResponse(
         String market,
 
         List<LeaseCurrency> currencies,
+        LeaseCurrency settlementCurrency,
         List<Integer> termsMonths,
 
         PercentageRangeDto initialPayment,

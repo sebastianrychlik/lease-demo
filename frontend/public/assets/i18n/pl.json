@@ -71,7 +71,7 @@
       "calculating": "Obliczanie oferty…",
       "errorTitle": "Nie można obecnie obliczyć oferty.",
       "monthlyPayment": "Szacowana rata miesięczna",
-      "exchangeRate": "Kurs NBP {{currency}}/PLN",
+      "exchangeRate": "Kurs NBP {{source}}/{{target}}",
       "exchangeRateDate": "Data kursu NBP",
       "vehicleValue": "Wartość pojazdu",
       "financedAmount": "Kwota finansowana",

@@ -190,7 +190,7 @@ export class LeaseQuotePageComponent {
       ([product, vehiclePrice, currency, termMonths, initialPaymentPercent, buyoutPercent, leaseType]): LeaseQuoteRequest => ({
         productCode: product.code,
         vehiclePrice,
-        currency,
+        vehiclePriceCurrency: currency,
         termMonths,
         initialPaymentPercent,
         buyoutPercent,

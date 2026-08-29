@@ -95,6 +95,17 @@ public class LeaseProduct {
     @Column(name = "default_currency", nullable = false, length = 3)
     private LeaseCurrency defaultCurrency;
 
+    /**
+     * The currency in which this product's lease amounts are calculated
+     * and settled (M5.1.3.2) — distinct from {@link #currencies}, which
+     * are the accepted VEHICLE PRICE currencies. Must be present in
+     * {@link #currencies}. The sole source of truth: never derived from
+     * {@link #market} at runtime.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "settlement_currency", nullable = false, length = 3)
+    private LeaseCurrency settlementCurrency;
+
     @Column(name = "default_term_months", nullable = false)
     private Integer defaultTermMonths;
 
@@ -202,6 +213,10 @@ public class LeaseProduct {
 
     public LeaseCurrency getDefaultCurrency() {
         return defaultCurrency;
+    }
+
+    public LeaseCurrency getSettlementCurrency() {
+        return settlementCurrency;
     }
 
     public Integer getDefaultTermMonths() {
