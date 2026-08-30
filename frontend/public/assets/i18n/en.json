@@ -181,5 +181,33 @@
       "poland": "Poland",
       "europe": "Europe"
     }
+  },
+  "application": {
+    "title": "Lease application",
+    "apply": "Apply",
+    "fields": {
+      "monthlyNetIncome": "Monthly net income",
+      "monthlyObligations": "Monthly obligations"
+    },
+    "status": {
+      "submitting": "Submitting your application…"
+    },
+    "result": {
+      "title": "Application submitted",
+      "decision": "Decision",
+      "creditScore": "Credit score",
+      "monthlyPayment": "Monthly lease",
+      "insurance": "Insurance",
+      "estimatedMonthlyTotal": "Estimated monthly total"
+    },
+    "decision": {
+      "APPROVED": "Approved",
+      "REVIEW": "Review",
+      "REJECTED": "Rejected"
+    },
+    "errors": {
+      "invalidInput": "Some of the application details are invalid.",
+      "generic": "Something went wrong while submitting your application. Please try again later."
+    }
   }
 }

@@ -181,5 +181,33 @@
       "poland": "Polska",
       "europe": "Europa"
     }
+  },
+  "application": {
+    "title": "Wniosek leasingowy",
+    "apply": "Złóż wniosek",
+    "fields": {
+      "monthlyNetIncome": "Miesięczny dochód netto",
+      "monthlyObligations": "Miesięczne zobowiązania"
+    },
+    "status": {
+      "submitting": "Wysyłanie wniosku…"
+    },
+    "result": {
+      "title": "Wniosek złożony",
+      "decision": "Decyzja",
+      "creditScore": "Wynik scoringowy",
+      "monthlyPayment": "Rata leasingu",
+      "insurance": "Ubezpieczenie",
+      "estimatedMonthlyTotal": "Szacowana rata całkowita"
+    },
+    "decision": {
+      "APPROVED": "Zatwierdzony",
+      "REVIEW": "Do weryfikacji",
+      "REJECTED": "Odrzucony"
+    },
+    "errors": {
+      "invalidInput": "Niektóre dane wniosku są nieprawidłowe.",
+      "generic": "Wystąpił błąd podczas składania wniosku. Spróbuj ponownie później."
+    }
   }
 }

@@ -1,6 +1,8 @@
 package com.leasedemo.exception;
 
 import com.leasedemo.exchange.exception.NbpClientException;
+import com.leasedemo.lease.application.exception.InvalidApplicationInputException;
+import com.leasedemo.lease.application.exception.InvalidInsuranceConfigurationException;
 import com.leasedemo.lease.product.exception.DuplicateLeaseProductCodeException;
 import com.leasedemo.lease.product.exception.InvalidLeaseProductConfigurationException;
 import com.leasedemo.lease.product.exception.InvalidLeaseProductOptionException;
@@ -104,6 +106,30 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleInvalidLeaseProductConfigurationException(InvalidLeaseProductConfigurationException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Invalid Lease Product Configuration");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles invalid insurance coverage/option/duplicate submissions on
+     * {@code POST /api/lease-applications} (M5.3 §10, §19).
+     */
+    @ExceptionHandler(InvalidInsuranceConfigurationException.class)
+    public ProblemDetail handleInvalidInsuranceConfigurationException(InvalidInsuranceConfigurationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid Insurance Configuration");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles invalid lease application financial input
+     * (monthlyNetIncome/monthlyObligations) (M5.3 §15, §19).
+     */
+    @ExceptionHandler(InvalidApplicationInputException.class)
+    public ProblemDetail handleInvalidApplicationInputException(InvalidApplicationInputException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid Application Input");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

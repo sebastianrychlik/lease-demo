@@ -22,8 +22,14 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { AppSelectOption, CardComponent, PageHeaderComponent, SelectComponent } from '../../../shared/ui';
 import { LeaseParametersComponent } from '../components/lease-parameters/lease-parameters.component';
 import { InsuranceConfiguratorComponent } from '../components/insurance-configurator/insurance-configurator.component';
+import {
+  LeaseApplicationComponent,
+  LeaseApplicationFormControls,
+  LeaseApplicationSubmissionState,
+} from '../components/lease-application/lease-application.component';
 import { QuoteSummaryComponent, QuoteSummaryViewState } from '../components/quote-summary/quote-summary.component';
 import { InsuranceConfiguration } from '../models/insurance.model';
+import { CreateLeaseApplicationRequest } from '../models/lease-application.model';
 import {
   LeaseCurrency,
   LeaseProductConfiguration,
@@ -33,6 +39,7 @@ import {
 } from '../models/lease-quote.model';
 import { LeaseProductService } from '../services/lease-product.service';
 import { LeaseQuoteService } from '../services/lease-quote.service';
+import { LeaseApplicationService } from '../services/lease-application.service';
 
 /** Typed reactive-form controls for the Lease Quote Simulator. */
 export interface LeaseQuoteFormControls {
@@ -80,6 +87,7 @@ const RECALCULATION_DEBOUNCE_MS = 200;
     LeaseParametersComponent,
     QuoteSummaryComponent,
     InsuranceConfiguratorComponent,
+    LeaseApplicationComponent,
     TranslocoModule,
   ],
   templateUrl: './lease-quote-page.component.html',
@@ -89,6 +97,7 @@ const RECALCULATION_DEBOUNCE_MS = 200;
 export class LeaseQuotePageComponent {
   private readonly leaseProductService = inject(LeaseProductService);
   private readonly leaseQuoteService = inject(LeaseQuoteService);
+  private readonly leaseApplicationService = inject(LeaseApplicationService);
   private readonly translocoService = inject(TranslocoService);
   private readonly languageService = inject(LanguageService);
 
@@ -266,6 +275,85 @@ export class LeaseQuotePageComponent {
 
   onInsuranceConfigurationChange(configuration: InsuranceConfiguration): void {
     this.insuranceConfiguration.set(configuration);
+  }
+
+  /**
+   * Financial application form (M5.3 §29) — kept separate from the Lease
+   * Quote `form` above rather than merged into it, matching the existing
+   * Insurance Configurator convention of a standalone, purpose-specific
+   * Reactive Form.
+   */
+  readonly applicationForm = new FormGroup<LeaseApplicationFormControls>({
+    monthlyNetIncome: new FormControl<number | null>(null, {
+      validators: [Validators.required, Validators.min(0.01)],
+    }),
+    monthlyObligations: new FormControl<number | null>(null, {
+      validators: [Validators.required, Validators.min(0)],
+    }),
+  });
+
+  /** Explicit submission state (M5.3 §34) — idle / submitting / success / error. */
+  readonly applicationState = signal<LeaseApplicationSubmissionState>({ status: 'idle' });
+
+  /** Apply is enabled only when product + quote are ready, the form is valid, and not already submitting (M5.3 §30). */
+  readonly canApply = toSignal(
+    combineLatest([this.viewState$, this.applicationForm.statusChanges.pipe(startWith(this.applicationForm.status))]).pipe(
+      map(
+        ([quoteState, formStatus]) =>
+          quoteState.status === 'success' && formStatus === 'VALID' && this.applicationState().status !== 'submitting',
+      ),
+    ),
+    { initialValue: false },
+  );
+
+  onApply(): void {
+    const quoteState = this.viewState();
+    const product = this.productConfigState();
+    if (quoteState.status !== 'success' || product.status !== 'ready') {
+      return;
+    }
+
+    const insurance = this.insuranceConfiguration();
+    const formValue = this.applicationForm.getRawValue();
+    if (formValue.monthlyNetIncome == null || formValue.monthlyObligations == null) {
+      return;
+    }
+
+    const request: CreateLeaseApplicationRequest = {
+      productCode: product.product.code,
+      vehiclePrice: this.form.controls.vehiclePrice.value,
+      vehiclePriceCurrency: this.form.controls.currency.value,
+      termMonths: this.form.controls.termMonths.value,
+      initialPaymentPercent: this.form.controls.initialPaymentPercent.value,
+      buyoutPercent: this.form.controls.buyoutPercent.value,
+      leaseType: this.form.controls.leaseType.value,
+      insurance: (insurance?.coverages ?? [])
+        .filter((coverage) => coverage.enabled)
+        .map((coverage) => ({ code: coverage.code, option: coverage.option })),
+      monthlyNetIncome: formValue.monthlyNetIncome,
+      monthlyObligations: formValue.monthlyObligations,
+    };
+
+    this.applicationState.set({ status: 'submitting' });
+    this.leaseApplicationService.submitApplication(request).subscribe({
+      next: (result) => this.applicationState.set({ status: 'success', result }),
+      error: (error: unknown) => this.applicationState.set({ status: 'error', message: this.mapApplicationError(error) }),
+    });
+  }
+
+  private mapApplicationError(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 400) {
+        return this.translocoService.translate('application.errors.invalidInput');
+      }
+      if (error.status === 401) {
+        return this.translocoService.translate('leaseQuote.errors.sessionExpired');
+      }
+      if (error.status === 502) {
+        return this.translocoService.translate('leaseQuote.errors.nbpUnavailable');
+      }
+    }
+    return this.translocoService.translate('application.errors.generic');
   }
 
   /**
