@@ -5,8 +5,10 @@ import com.leasedemo.exception.CustomerProfileNotFoundException;
 import com.leasedemo.lease.application.dto.CreateLeaseApplicationRequest;
 import com.leasedemo.lease.application.dto.LeaseApplicationResponse;
 import com.leasedemo.lease.application.entity.LeaseApplication;
+import com.leasedemo.lease.application.event.LeaseApplicationApprovedEvent;
 import com.leasedemo.lease.application.exception.InvalidApplicationInputException;
 import com.leasedemo.lease.application.insurance.InsurancePremiumCalculator;
+import com.leasedemo.lease.application.model.ApplicationStatus;
 import com.leasedemo.lease.application.scoring.CreditScoringService;
 import com.leasedemo.lease.quote.dto.LeaseQuoteRequest;
 import com.leasedemo.lease.quote.dto.LeaseQuoteResponse;
@@ -34,18 +36,21 @@ public class LeaseApplicationService {
     private final InsurancePremiumCalculator insurancePremiumCalculator;
     private final CreditScoringService creditScoringService;
     private final LeaseApplicationPersistenceService persistenceService;
+    private final LeaseApplicationEventPublisher eventPublisher;
 
     public LeaseApplicationService(
             CustomerRepository customerRepository,
             LeaseQuoteService leaseQuoteService,
             InsurancePremiumCalculator insurancePremiumCalculator,
             CreditScoringService creditScoringService,
-            LeaseApplicationPersistenceService persistenceService) {
+            LeaseApplicationPersistenceService persistenceService,
+            LeaseApplicationEventPublisher eventPublisher) {
         this.customerRepository = customerRepository;
         this.leaseQuoteService = leaseQuoteService;
         this.insurancePremiumCalculator = insurancePremiumCalculator;
         this.creditScoringService = creditScoringService;
         this.persistenceService = persistenceService;
+        this.eventPublisher = eventPublisher;
     }
 
     public LeaseApplicationResponse submit(String keycloakUserId, CreateLeaseApplicationRequest request) {
@@ -110,6 +115,16 @@ public class LeaseApplicationService {
 
         // The ONLY transactional boundary — persistence only, no external calls.
         LeaseApplication saved = persistenceService.save(leaseApplication);
+
+        // Kafka publish happens strictly AFTER the persistence transaction
+        // has committed and returned (M5.5 §13, §14) — never inside
+        // LeaseApplicationPersistenceService.save(). Only APPROVED
+        // applications publish an event; REVIEW/REJECTED persist only
+        // (M5.5 §12).
+        if (saved.getStatus() == ApplicationStatus.APPROVED) {
+            eventPublisher.publishApproved(LeaseApplicationApprovedEvent.of(
+                    saved.getId(), saved.getStatus(), saved.getProductCode(), saved.getSettlementCurrency()));
+        }
 
         BigDecimal estimatedMonthlyTotal = saved.getMonthlyPayment().add(saved.getInsuranceMonthlyPremium());
 

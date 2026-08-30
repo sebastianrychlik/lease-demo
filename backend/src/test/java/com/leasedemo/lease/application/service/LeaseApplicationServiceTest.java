@@ -6,6 +6,7 @@ import com.leasedemo.exception.CustomerProfileNotFoundException;
 import com.leasedemo.lease.application.dto.CreateLeaseApplicationRequest;
 import com.leasedemo.lease.application.dto.LeaseApplicationResponse;
 import com.leasedemo.lease.application.entity.LeaseApplication;
+import com.leasedemo.lease.application.event.LeaseApplicationApprovedEvent;
 import com.leasedemo.lease.application.exception.InvalidApplicationInputException;
 import com.leasedemo.lease.application.insurance.InsurancePremiumCalculator;
 import com.leasedemo.lease.application.model.ApplicationStatus;
@@ -46,6 +47,8 @@ class LeaseApplicationServiceTest {
     private LeaseQuoteService leaseQuoteService;
     @Mock
     private LeaseApplicationPersistenceService persistenceService;
+    @Mock
+    private LeaseApplicationEventPublisher eventPublisher;
 
     private LeaseApplicationService service;
 
@@ -55,7 +58,7 @@ class LeaseApplicationServiceTest {
     void setUp() {
         service = new LeaseApplicationService(
                 customerRepository, leaseQuoteService, new InsurancePremiumCalculator(),
-                new CreditScoringService(), persistenceService);
+                new CreditScoringService(), persistenceService, eventPublisher);
 
         customer = new Customer(
                 "keycloak-sub-123", "Jane", "Doe", "jane@example.com", null,
@@ -132,6 +135,58 @@ class LeaseApplicationServiceTest {
 
         assertThatThrownBy(() -> service.submit("unknown-sub", defaultRequest()))
                 .isInstanceOf(CustomerProfileNotFoundException.class);
+    }
+
+    private CreateLeaseApplicationRequest requestWithIncome(BigDecimal monthlyNetIncome, BigDecimal monthlyObligations) {
+        return new CreateLeaseApplicationRequest(
+                "STANDARD_CAR_PL", new BigDecimal("45000"), LeaseCurrency.EUR, 36,
+                new BigDecimal("20"), new BigDecimal("15"), LeaseType.OPERATING,
+                List.of(), monthlyNetIncome, monthlyObligations);
+    }
+
+    @Test
+    @DisplayName("APPROVED application publishes a LeaseApplicationApprovedEvent (M5.5)")
+    void publishesEventWhenApproved() {
+        when(customerRepository.findByKeycloakUserId(any())).thenReturn(Optional.of(customer));
+        when(leaseQuoteService.calculate(any())).thenReturn(defaultQuoteResponse());
+        when(persistenceService.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // income far above the lease burden -> deterministic APPROVED (score >= 700)
+        LeaseApplicationResponse response = service.submit(
+                "keycloak-sub-123", requestWithIncome(new BigDecimal("15000"), new BigDecimal("1000")));
+
+        assertThat(response.status()).isEqualTo(ApplicationStatus.APPROVED);
+        verify(eventPublisher).publishApproved(any(LeaseApplicationApprovedEvent.class));
+    }
+
+    @Test
+    @DisplayName("REVIEW application does NOT publish an event (M5.5)")
+    void doesNotPublishWhenReview() {
+        when(customerRepository.findByKeycloakUserId(any())).thenReturn(Optional.of(customer));
+        when(leaseQuoteService.calculate(any())).thenReturn(defaultQuoteResponse());
+        when(persistenceService.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // income == total burden -> affordability ratio 1.0 -> deterministic score 650 (REVIEW)
+        LeaseApplicationResponse response = service.submit(
+                "keycloak-sub-123", requestWithIncome(new BigDecimal("4728.38"), new BigDecimal("1000")));
+
+        assertThat(response.status()).isEqualTo(ApplicationStatus.REVIEW);
+        verify(eventPublisher, never()).publishApproved(any());
+    }
+
+    @Test
+    @DisplayName("REJECTED application does NOT publish an event (M5.5)")
+    void doesNotPublishWhenRejected() {
+        when(customerRepository.findByKeycloakUserId(any())).thenReturn(Optional.of(customer));
+        when(leaseQuoteService.calculate(any())).thenReturn(defaultQuoteResponse());
+        when(persistenceService.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // low income relative to burden -> deterministic REJECTED (score < 600)
+        LeaseApplicationResponse response = service.submit(
+                "keycloak-sub-123", requestWithIncome(new BigDecimal("3000"), new BigDecimal("1000")));
+
+        assertThat(response.status()).isEqualTo(ApplicationStatus.REJECTED);
+        verify(eventPublisher, never()).publishApproved(any());
     }
 
     @Test
