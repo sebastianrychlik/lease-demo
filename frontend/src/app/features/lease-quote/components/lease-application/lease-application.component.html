@@ -2,19 +2,49 @@
   <h3 class="lease-application__title">{{ 'application.title' | transloco }}</h3>
 
   <div class="lease-application__row">
-    <app-input
-      type="number"
-      [label]="'application.fields.monthlyNetIncome' | transloco"
-      formControlName="monthlyNetIncome"
-    />
-    <app-input
-      type="number"
-      [label]="'application.fields.monthlyObligations' | transloco"
-      formControlName="monthlyObligations"
-    />
+    <div class="lease-application__field">
+      <app-input
+        type="number"
+        [min]="0"
+        [step]="0.01"
+        [label]="'application.fields.monthlyNetIncome' | transloco"
+        formControlName="monthlyNetIncome"
+        [invalid]="isInvalid('monthlyNetIncome')"
+        [errorMessage]="errorMessage('monthlyNetIncome')"
+      />
+      @if (formGroup().controls.monthlyNetIncome.value !== null && !isInvalid('monthlyNetIncome')) {
+        <p class="lease-application__hint">
+          {{
+            formGroup().controls.monthlyNetIncome.value
+              | ldCurrency: settlementCurrency() : locale()
+          }}
+        </p>
+      }
+    </div>
+    <div class="lease-application__field">
+      <app-input
+        type="number"
+        [min]="0"
+        [step]="0.01"
+        [label]="'application.fields.monthlyObligations' | transloco"
+        formControlName="monthlyObligations"
+        [invalid]="isInvalid('monthlyObligations')"
+        [errorMessage]="errorMessage('monthlyObligations')"
+      />
+      @if (
+        formGroup().controls.monthlyObligations.value !== null && !isInvalid('monthlyObligations')
+      ) {
+        <p class="lease-application__hint">
+          {{
+            formGroup().controls.monthlyObligations.value
+              | ldCurrency: settlementCurrency() : locale()
+          }}
+        </p>
+      }
+    </div>
   </div>
 
-  <app-button type="button" [disabled]="!canApply()" (click)="onApply()">
+  <app-button class="lease-quote-page" type="button" [disabled]="!canApply()" (click)="onApply()">
     {{ 'application.apply' | transloco }}
   </app-button>
 </form>
@@ -52,11 +82,15 @@
       </div>
       <div class="lease-application__row">
         <dt>{{ 'application.result.insurance' | transloco }}</dt>
-        <dd>{{ result.insuranceMonthlyPremium | ldCurrency: result.settlementCurrency : locale() }}</dd>
+        <dd>
+          {{ result.insuranceMonthlyPremium | ldCurrency: result.settlementCurrency : locale() }}
+        </dd>
       </div>
       <div class="lease-application__row">
         <dt>{{ 'application.result.estimatedMonthlyTotal' | transloco }}</dt>
-        <dd>{{ result.estimatedMonthlyTotal | ldCurrency: result.settlementCurrency : locale() }}</dd>
+        <dd>
+          {{ result.estimatedMonthlyTotal | ldCurrency: result.settlementCurrency : locale() }}
+        </dd>
       </div>
     </dl>
   </app-card>

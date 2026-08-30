@@ -31,6 +31,19 @@
   }
 }
 
+// M5.5.1: consistent 16px vertical spacing between major Lease Quote page
+// cards/sections (quote cards → Insurance card → Lease Application card).
+$card-gap: 1rem;
+
+.lease-quote-page {
+  margin-bottom: $card-gap;
+}
+
 .lease-quote-page__insurance {
-  margin-top: tokens.$ld-section-gap;
+  margin-top: $card-gap;
+  margin-bottom: $card-gap;
+}
+
+.lease-quote-page__application {
+  margin-top: $card-gap;
 }
