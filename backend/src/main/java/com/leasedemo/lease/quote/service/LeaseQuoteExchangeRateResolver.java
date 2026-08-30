@@ -1,9 +1,7 @@
 package com.leasedemo.lease.quote.service;
 
-import com.leasedemo.exchange.client.NbpClient;
-import com.leasedemo.exchange.dto.external.NbpRateDto;
-import com.leasedemo.exchange.dto.external.NbpTableDto;
-import com.leasedemo.exchange.exception.NbpClientException;
+import com.leasedemo.exchange.cache.CachedNbpRateProvider;
+import com.leasedemo.exchange.cache.NbpRateSnapshot;
 import com.leasedemo.lease.quote.exception.UnsupportedCurrencyException;
 import com.leasedemo.lease.quote.model.LeaseCurrency;
 import org.springframework.stereotype.Component;
@@ -11,12 +9,12 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.util.List;
 
 /**
  * Resolves the exchange rate between a vehicle price currency and a
- * product's settlement currency (M5.1.3.2), reusing the existing
- * {@link NbpClient} NBP Table A integration.
+ * product's settlement currency (M5.1.3.2), via the Redis-backed
+ * {@link CachedNbpRateProvider} (M5.1.6), which in turn reuses the existing
+ * {@code NbpClient} NBP Table A integration on a cache miss.
  *
  * <p>Semantics: {@code exchangeRate} is the amount of settlement currency
  * for ONE unit of vehicle price (source) currency. For example, if the
@@ -25,17 +23,19 @@ import java.util.List;
  *   <li>EUR (source) -> PLN (settlement): {@code exchangeRate = 4.3328}
  *       — the NBP rate is used directly.</li>
  *   <li>PLN (source) -> EUR (settlement): {@code exchangeRate = 1 / 4.3328}
- *       — the mathematically correct inverse of the NBP rate.</li>
+ *       — the mathematically correct inverse of the NBP rate, derived from
+ *       the same canonical cached EUR -> PLN snapshot (no separate cache
+ *       entry/NBP call for the inverse direction).</li>
  *   <li>same currency (source == settlement): {@code exchangeRate = 1},
- *       and NBP is never called (M5.1.3.2 §11 same-currency short-circuit).</li>
+ *       and neither Redis nor NBP is ever consulted (M5.1.3.2 §11
+ *       same-currency short-circuit).</li>
  * </ul>
  *
  * <p>Only PLN/EUR are supported (M5.1 currency set). This class contains
- * no lease-calculation business logic — only currency-to-rate resolution.
- * It must not duplicate {@link NbpClient}. No caching is introduced here
- * (Redis is deliberately out of scope for M5.1.3.2) — a future cache can
- * be inserted between this resolver and {@link NbpClient} without changing
- * this class's public contract.
+ * no lease-calculation business logic and no Redis-specific types
+ * ({@code RedisTemplate}/{@code RedisCacheManager} etc.) — only
+ * currency-to-rate resolution against the semantic
+ * {@link CachedNbpRateProvider} bean.
  */
 @Component
 public class LeaseQuoteExchangeRateResolver {
@@ -44,10 +44,10 @@ public class LeaseQuoteExchangeRateResolver {
     private static final int NBP_RATE_SCALE = 4;
     private static final MathContext INVERSION_MATH_CONTEXT = new MathContext(20, RoundingMode.HALF_UP);
 
-    private final NbpClient nbpClient;
+    private final CachedNbpRateProvider cachedNbpRateProvider;
 
-    public LeaseQuoteExchangeRateResolver(NbpClient nbpClient) {
-        this.nbpClient = nbpClient;
+    public LeaseQuoteExchangeRateResolver(CachedNbpRateProvider cachedNbpRateProvider) {
+        this.cachedNbpRateProvider = cachedNbpRateProvider;
     }
 
     /**
@@ -78,23 +78,13 @@ public class LeaseQuoteExchangeRateResolver {
 
         LeaseCurrency nonPlnCurrency = sourceCurrency == LeaseCurrency.PLN ? settlementCurrency : sourceCurrency;
 
-        List<NbpTableDto> tables = nbpClient.fetchTableA();
-        NbpTableDto firstTable = tables.stream()
-                .findFirst()
-                .orElseThrow(() -> new NbpClientException(
-                        "NBP API response contained no exchange rate tables."));
-
-        NbpRateDto rateDto = firstTable.rates().stream()
-                .filter(rate -> nonPlnCurrency.name().equals(rate.code()))
-                .findFirst()
-                .orElseThrow(() -> new UnsupportedCurrencyException(
-                        "No NBP exchange rate available for currency " + nonPlnCurrency));
-
-        BigDecimal nonPlnToPlnRate = BigDecimal.valueOf(rateDto.mid()).setScale(NBP_RATE_SCALE, RoundingMode.HALF_UP);
+        NbpRateSnapshot snapshot = cachedNbpRateProvider.getRateToPln(nonPlnCurrency.name());
+        BigDecimal nonPlnToPlnRate = snapshot.rateToPln().setScale(NBP_RATE_SCALE, RoundingMode.HALF_UP);
+        String effectiveDate = snapshot.effectiveDate().toString();
 
         if (settlementCurrency == LeaseCurrency.PLN) {
             // sourceCurrency (nonPlnCurrency) -> PLN: use the NBP rate directly.
-            return new ResolvedRate(nonPlnToPlnRate, firstTable.effectiveDate());
+            return new ResolvedRate(nonPlnToPlnRate, effectiveDate);
         }
 
         // sourceCurrency is PLN, settlementCurrency is nonPlnCurrency: use the
@@ -103,6 +93,6 @@ public class LeaseQuoteExchangeRateResolver {
         BigDecimal inverseRate = BigDecimal.ONE
                 .divide(nonPlnToPlnRate, INVERSION_MATH_CONTEXT)
                 .setScale(NBP_RATE_SCALE, RoundingMode.HALF_UP);
-        return new ResolvedRate(inverseRate, firstTable.effectiveDate());
+        return new ResolvedRate(inverseRate, effectiveDate);
     }
 }
