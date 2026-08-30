@@ -154,5 +154,32 @@
       "sessionExpired": "Your session has expired. Please sign in again.",
       "generic": "Something went wrong while calculating your quote. Please try again later."
     }
+  },
+  "insurance": {
+    "title": "Insurance",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "enable": "Enable",
+    "totalPremium": "Total monthly premium",
+    "coverages": {
+      "gap": {
+        "name": "GAP",
+        "description": "Protects the difference between vehicle value and outstanding lease balance."
+      },
+      "assistance": {
+        "name": "Assistance",
+        "description": "Roadside assistance package."
+      },
+      "replacementCar": {
+        "name": "Replacement car",
+        "description": "Replacement vehicle coverage."
+      }
+    },
+    "options": {
+      "standard": "Standard",
+      "premium": "Premium",
+      "poland": "Poland",
+      "europe": "Europe"
+    }
   }
 }

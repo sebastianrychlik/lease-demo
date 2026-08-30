@@ -33,6 +33,14 @@
           <app-quote-summary [viewState]="viewState()" [locale]="locale()" />
         </app-card>
       </div>
+
+      <app-card class="lease-quote-page__insurance">
+        <app-insurance-configurator
+          [settlementCurrency]="state.product.settlementCurrency"
+          [locale]="locale()"
+          (configurationChange)="onInsuranceConfigurationChange($event)"
+        />
+      </app-card>
     }
   }
 </div>

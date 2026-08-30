@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
@@ -21,7 +21,9 @@ import {
 import { LanguageService } from '../../../core/i18n/language.service';
 import { AppSelectOption, CardComponent, PageHeaderComponent, SelectComponent } from '../../../shared/ui';
 import { LeaseParametersComponent } from '../components/lease-parameters/lease-parameters.component';
+import { InsuranceConfiguratorComponent } from '../components/insurance-configurator/insurance-configurator.component';
 import { QuoteSummaryComponent, QuoteSummaryViewState } from '../components/quote-summary/quote-summary.component';
+import { InsuranceConfiguration } from '../models/insurance.model';
 import {
   LeaseCurrency,
   LeaseProductConfiguration,
@@ -77,6 +79,7 @@ const RECALCULATION_DEBOUNCE_MS = 200;
     SelectComponent,
     LeaseParametersComponent,
     QuoteSummaryComponent,
+    InsuranceConfiguratorComponent,
     TranslocoModule,
   ],
   templateUrl: './lease-quote-page.component.html',
@@ -252,6 +255,18 @@ export class LeaseQuotePageComponent {
   readonly viewState = toSignal(this.viewState$, {
     initialValue: { status: 'loading' } as QuoteSummaryViewState,
   });
+
+  /**
+   * Latest Insurance Configurator selection (M5.2 §23) — prepares the future
+   * M5.3 LeaseApplication payload. Purely client-side state: never sent to
+   * `POST /api/lease-quotes/calculate` (M5.2 §21) and does not couple to the
+   * lease quote calculation above.
+   */
+  readonly insuranceConfiguration = signal<InsuranceConfiguration | null>(null);
+
+  onInsuranceConfigurationChange(configuration: InsuranceConfiguration): void {
+    this.insuranceConfiguration.set(configuration);
+  }
 
   /**
    * Ensures the form never carries a value the selected product does not

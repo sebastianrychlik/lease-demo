@@ -154,5 +154,32 @@
       "sessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie.",
       "generic": "Wystąpił błąd podczas obliczania oferty. Spróbuj ponownie później."
     }
+  },
+  "insurance": {
+    "title": "Ubezpieczenie",
+    "expandAll": "Rozwiń wszystkie",
+    "collapseAll": "Zwiń wszystkie",
+    "enable": "Włącz",
+    "totalPremium": "Łączna składka miesięczna",
+    "coverages": {
+      "gap": {
+        "name": "GAP",
+        "description": "Chroni różnicę między wartością pojazdu a pozostałym saldem leasingu."
+      },
+      "assistance": {
+        "name": "Assistance",
+        "description": "Pakiet pomocy drogowej."
+      },
+      "replacementCar": {
+        "name": "Samochód zastępczy",
+        "description": "Ubezpieczenie pojazdu zastępczego."
+      }
+    },
+    "options": {
+      "standard": "Standard",
+      "premium": "Premium",
+      "poland": "Polska",
+      "europe": "Europa"
+    }
   }
 }

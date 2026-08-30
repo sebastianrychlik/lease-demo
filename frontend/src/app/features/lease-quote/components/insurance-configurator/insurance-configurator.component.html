@@ -1,0 +1,56 @@
+<div class="insurance-configurator">
+  <div class="insurance-configurator__toolbar">
+    <h3 class="insurance-configurator__title">{{ 'insurance.title' | transloco }}</h3>
+    <div class="insurance-configurator__actions">
+      <button type="button" class="insurance-configurator__link" (click)="expandAll()">
+        {{ 'insurance.expandAll' | transloco }}
+      </button>
+      <button type="button" class="insurance-configurator__link" (click)="collapseAll()">
+        {{ 'insurance.collapseAll' | transloco }}
+      </button>
+    </div>
+  </div>
+
+  <mat-accordion multi="true" [formGroup]="form">
+    <div formArrayName="coverages">
+      @for (group of coverageGroups(); track group.controls.code.value; let i = $index) {
+        @let definition = definitionFor(group.controls.code.value);
+        <mat-expansion-panel [formGroupName]="i" class="insurance-configurator__panel">
+          <mat-expansion-panel-header>
+            <mat-panel-title>{{ definition.nameTranslationKey | transloco }}</mat-panel-title>
+            <mat-panel-description>{{ definition.descriptionTranslationKey | transloco }}</mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <app-checkbox [label]="'insurance.enable' | transloco" formControlName="enabled" />
+
+          @if (group.controls.enabled.value && definition.options?.length) {
+            <div class="insurance-configurator__options" role="radiogroup">
+              @for (option of definition.options; track option.value) {
+                <label class="insurance-configurator__option">
+                  <input type="radio" [value]="option.value" formControlName="option" />
+                  {{ option.labelKey | transloco }} —
+                  {{ option.monthlyPremium | ldCurrency: settlementCurrency() : locale() }}
+                </label>
+              }
+            </div>
+          }
+        </mat-expansion-panel>
+      }
+    </div>
+  </mat-accordion>
+
+  <div class="insurance-configurator__summary">
+    @for (coverage of configuration().coverages; track coverage.code) {
+      @if (coverage.enabled) {
+        <div class="insurance-configurator__summary-row">
+          <span>{{ definitionFor(coverage.code).nameTranslationKey | transloco }}</span>
+          <span>{{ coverage.monthlyPremium | ldCurrency: settlementCurrency() : locale() }}</span>
+        </div>
+      }
+    }
+    <div class="insurance-configurator__summary-row insurance-configurator__summary-row--total">
+      <span>{{ 'insurance.totalPremium' | transloco }}</span>
+      <span>{{ configuration().totalMonthlyPremium | ldCurrency: settlementCurrency() : locale() }}</span>
+    </div>
+  </div>
+</div>
