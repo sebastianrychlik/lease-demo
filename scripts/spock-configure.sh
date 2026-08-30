@@ -30,6 +30,7 @@ REPLICATED_TABLES=(
     "public.lease_product_currency"
     "public.lease_product_term"
     "public.lease_product_lease_type"
+    "public.lease_application"
 )
 
 echo "========================================"

@@ -41,6 +41,17 @@
           (configurationChange)="onInsuranceConfigurationChange($event)"
         />
       </app-card>
+
+      <app-card class="lease-quote-page__application">
+        <app-lease-application
+          [formGroup]="applicationForm"
+          [canApply]="canApply()"
+          [state]="applicationState()"
+          [settlementCurrency]="state.product.settlementCurrency"
+          [locale]="locale()"
+          (apply)="onApply()"
+        />
+      </app-card>
     }
   }
 </div>

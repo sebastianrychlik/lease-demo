@@ -1,0 +1,63 @@
+<form class="lease-application" [formGroup]="formGroup()">
+  <h3 class="lease-application__title">{{ 'application.title' | transloco }}</h3>
+
+  <div class="lease-application__row">
+    <app-input
+      type="number"
+      [label]="'application.fields.monthlyNetIncome' | transloco"
+      formControlName="monthlyNetIncome"
+    />
+    <app-input
+      type="number"
+      [label]="'application.fields.monthlyObligations' | transloco"
+      formControlName="monthlyObligations"
+    />
+  </div>
+
+  <app-button type="button" [disabled]="!canApply()" (click)="onApply()">
+    {{ 'application.apply' | transloco }}
+  </app-button>
+</form>
+
+@if (state().status === 'submitting') {
+  <app-card class="lease-application__status">
+    <p>{{ 'application.status.submitting' | transloco }}</p>
+  </app-card>
+}
+
+@if (state().status === 'error') {
+  <app-card class="lease-application__status lease-application__status--error">
+    <p>{{ $any(state()).message }}</p>
+  </app-card>
+}
+
+@if (state().status === 'success') {
+  @let result = $any(state()).result;
+
+  <app-card class="lease-application__result">
+    <h3>{{ 'application.result.title' | transloco }}</h3>
+
+    <dl class="lease-application__grid">
+      <div class="lease-application__row">
+        <dt>{{ 'application.result.decision' | transloco }}</dt>
+        <dd>{{ 'application.decision.' + result.status | transloco }}</dd>
+      </div>
+      <div class="lease-application__row">
+        <dt>{{ 'application.result.creditScore' | transloco }}</dt>
+        <dd>{{ result.creditScore }}</dd>
+      </div>
+      <div class="lease-application__row">
+        <dt>{{ 'application.result.monthlyPayment' | transloco }}</dt>
+        <dd>{{ result.monthlyPayment | ldCurrency: result.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="lease-application__row">
+        <dt>{{ 'application.result.insurance' | transloco }}</dt>
+        <dd>{{ result.insuranceMonthlyPremium | ldCurrency: result.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="lease-application__row">
+        <dt>{{ 'application.result.estimatedMonthlyTotal' | transloco }}</dt>
+        <dd>{{ result.estimatedMonthlyTotal | ldCurrency: result.settlementCurrency : locale() }}</dd>
+      </div>
+    </dl>
+  </app-card>
+}
