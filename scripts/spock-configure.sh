@@ -26,6 +26,10 @@ REPLICATION_SET="default"
 REPLICATED_TABLES=(
     "public.customers"
     "public.replication_demo"
+    "public.lease_product"
+    "public.lease_product_currency"
+    "public.lease_product_term"
+    "public.lease_product_lease_type"
 )
 
 echo "========================================"

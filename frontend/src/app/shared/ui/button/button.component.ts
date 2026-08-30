@@ -4,6 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 /** Supported LeaseDemo button visual variants. */
 export type AppButtonVariant = 'primary' | 'secondary' | 'danger';
 
+/** Native `<button>` `type` values `app-button` forwards. */
+export type AppButtonType = 'button' | 'submit' | 'reset';
+
 /**
  * LeaseDemo application-level button.
  *
@@ -31,7 +34,7 @@ export type AppButtonVariant = 'primary' | 'secondary' | 'danger';
       [class.app-button--secondary]="variant() === 'secondary'"
       [class.app-button--danger]="variant() === 'danger'"
       mat-flat-button
-      type="button"
+      [type]="type()"
       [disabled]="disabled()"
     >
       <ng-content></ng-content>
@@ -43,6 +46,15 @@ export type AppButtonVariant = 'primary' | 'secondary' | 'danger';
 export class ButtonComponent {
   /** Visual variant. Defaults to the primary corporate action style. */
   readonly variant = input<AppButtonVariant>('primary');
+
+  /**
+   * Native `<button>` `type`, forwarded as-is. Defaults to `'button'` so
+   * existing call sites (which never set this) keep their current
+   * behavior. Callers that place `<app-button>` inside a `<form>` and want
+   * it to trigger `(ngSubmit)` MUST explicitly set `type="submit"` — this
+   * component performs no implicit form-submission magic.
+   */
+  readonly type = input<AppButtonType>('button');
 
   /** Semantic disabled state — sets the native `disabled` attribute. */
   readonly disabled = input<boolean>(false);

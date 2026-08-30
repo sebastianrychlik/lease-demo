@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 
 import { ButtonComponent } from './button.component';
 
@@ -56,6 +57,44 @@ describe('ButtonComponent', () => {
   it('is enabled by default', () => {
     fixture.detectChanges();
     expect(buttonEl().disabled).toBeFalse();
+  });
+
+  it('defaults to type="button" (no implicit form submission)', () => {
+    fixture.detectChanges();
+    expect(buttonEl().type).toBe('button');
+  });
+
+  it('forwards type="submit" so it can trigger a parent form ngSubmit', () => {
+    fixture.componentRef.setInput('type', 'submit');
+    fixture.detectChanges();
+    expect(buttonEl().type).toBe('submit');
+  });
+});
+
+describe('ButtonComponent (submit inside a form)', () => {
+  @Component({
+    standalone: true,
+    imports: [FormsModule, ButtonComponent],
+    template: `
+      <form (ngSubmit)="onSubmit()">
+        <app-button type="submit">Save</app-button>
+      </form>
+    `,
+  })
+  class SubmitHostComponent {
+    submitted = false;
+    onSubmit(): void {
+      this.submitted = true;
+    }
+  }
+
+  it('triggers the parent form (ngSubmit) when clicked', () => {
+    const hostFixture = TestBed.configureTestingModule({ imports: [SubmitHostComponent] })
+      .createComponent(SubmitHostComponent);
+    hostFixture.detectChanges();
+    const button: HTMLButtonElement = hostFixture.nativeElement.querySelector('button');
+    button.click();
+    expect(hostFixture.componentInstance.submitted).toBeTrue();
   });
 });
 

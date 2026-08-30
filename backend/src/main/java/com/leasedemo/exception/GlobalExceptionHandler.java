@@ -1,6 +1,12 @@
 package com.leasedemo.exception;
 
 import com.leasedemo.exchange.exception.NbpClientException;
+import com.leasedemo.lease.product.exception.DuplicateLeaseProductCodeException;
+import com.leasedemo.lease.product.exception.InvalidLeaseProductConfigurationException;
+import com.leasedemo.lease.product.exception.InvalidLeaseProductOptionException;
+import com.leasedemo.lease.product.exception.LeaseProductNotFoundException;
+import com.leasedemo.lease.product.exception.LeaseProductUnavailableException;
+import com.leasedemo.lease.quote.exception.UnsupportedCurrencyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +28,82 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleNbpClientException(NbpClientException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         problemDetail.setTitle("NBP API Unavailable");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles lease quote requests for a currency not present in the
+     * current NBP Table A response (M5.1).
+     */
+    @ExceptionHandler(UnsupportedCurrencyException.class)
+    public ProblemDetail handleUnsupportedCurrencyException(UnsupportedCurrencyException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problemDetail.setTitle("Unsupported Currency");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles lease quote requests referencing an unknown Lease Product
+     * code (M5.1.2).
+     */
+    @ExceptionHandler(LeaseProductNotFoundException.class)
+    public ProblemDetail handleLeaseProductNotFoundException(LeaseProductNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problemDetail.setTitle("Lease Product Not Found");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles lease quote requests for a Lease Product that exists but is
+     * disabled, belongs to a different market, or is outside its valid
+     * date range (M5.1.2).
+     */
+    @ExceptionHandler(LeaseProductUnavailableException.class)
+    public ProblemDetail handleLeaseProductUnavailableException(LeaseProductUnavailableException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problemDetail.setTitle("Lease Product Unavailable");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles lease quote requests whose currency/term/percent range/lease
+     * type is not offered by the selected Lease Product (M5.1.2). Angular's
+     * own form validators are UX only — this is the authoritative check.
+     */
+    @ExceptionHandler(InvalidLeaseProductOptionException.class)
+    public ProblemDetail handleInvalidLeaseProductOptionException(InvalidLeaseProductOptionException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid Lease Product Option");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles ADMIN Lease Product create requests using a code that
+     * already exists (M5.1.4 §11) — product code must be unique.
+     */
+    @ExceptionHandler(DuplicateLeaseProductCodeException.class)
+    public ProblemDetail handleDuplicateLeaseProductCodeException(DuplicateLeaseProductCodeException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problemDetail.setTitle("Duplicate Lease Product Code");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    /**
+     * Handles ADMIN Lease Product create/update requests that fail
+     * cross-field business validation (M5.1.4 §16-22) — e.g. settlement
+     * currency not among accepted currencies, invalid range, unknown
+     * default lease type.
+     */
+    @ExceptionHandler(InvalidLeaseProductConfigurationException.class)
+    public ProblemDetail handleInvalidLeaseProductConfigurationException(InvalidLeaseProductConfigurationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Invalid Lease Product Configuration");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

@@ -7,9 +7,10 @@ import { NavigationItem } from '../models/navigation-item.model';
 
 /** Admin sidebar navigation (§ M4.3). */
 const ADMIN_NAVIGATION: readonly NavigationItem[] = [
-  { label: 'Dashboard', route: '/admin/dashboard' },
-  { label: 'Customers', route: '/admin/customers' },
-  { label: 'Leases', route: '/admin/leases' },
+  { label: 'admin.nav.dashboard', route: '/admin/dashboard' },
+  { label: 'admin.nav.customers', route: '/admin/customers' },
+  { label: 'admin.nav.leaseProducts', route: '/admin/lease-products' },
+  { label: 'admin.nav.leases', route: '/admin/leases' },
 ];
 
 /**
@@ -18,7 +19,7 @@ const ADMIN_NAVIGATION: readonly NavigationItem[] = [
  * CustomerLayout.
  */
 const ADMIN_SECONDARY_NAVIGATION: readonly NavigationItem[] = [
-  { label: 'UX Demo', route: '/ux-demo' },
+  { label: 'admin.nav.uxDemo', route: '/ux-demo' },
 ];
 
 /**

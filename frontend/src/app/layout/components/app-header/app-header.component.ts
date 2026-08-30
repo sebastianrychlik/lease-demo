@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { TranslocoModule } from '@jsverse/transloco';
 
 import { AuthService } from '../../../core/services/auth.service';
+import { LanguageSwitcherComponent } from '../language-switcher/language-switcher.component';
 
 /**
  * Shared LeaseDemo application-shell header.
@@ -15,6 +17,7 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-header',
   standalone: true,
+  imports: [TranslocoModule, LanguageSwitcherComponent],
   templateUrl: './app-header.component.html',
   styleUrl: './app-header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

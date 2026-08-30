@@ -31,6 +31,30 @@ export const ADMIN_ROUTES: Routes = [
         data: { title: 'Customers' },
       },
       {
+        path: 'lease-products',
+        loadComponent: () =>
+          import('./lease-products/pages/lease-product-list/lease-product-list-page.component').then(
+            (m) => m.LeaseProductListPageComponent
+          ),
+        data: { title: 'Lease Products' },
+      },
+      {
+        path: 'lease-products/new',
+        loadComponent: () =>
+          import('./lease-products/pages/lease-product-editor/lease-product-editor-page.component').then(
+            (m) => m.LeaseProductEditorPageComponent
+          ),
+        data: { title: 'Add Lease Product' },
+      },
+      {
+        path: 'lease-products/:code/edit',
+        loadComponent: () =>
+          import('./lease-products/pages/lease-product-editor/lease-product-editor-page.component').then(
+            (m) => m.LeaseProductEditorPageComponent
+          ),
+        data: { title: 'Edit Lease Product' },
+      },
+      {
         path: 'leases',
         loadComponent: () =>
           import('../../shared/components/feature-placeholder/feature-placeholder.component').then(

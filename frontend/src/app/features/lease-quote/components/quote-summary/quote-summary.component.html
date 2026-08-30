@@ -1,0 +1,75 @@
+@if (viewState().status === 'loading') {
+  <div class="quote-summary quote-summary--loading">
+    <p class="quote-summary__state">{{ 'leaseQuote.summary.calculating' | transloco }}</p>
+  </div>
+}
+
+@if (viewState().status === 'error') {
+  <div class="quote-summary quote-summary--error">
+    <p class="quote-summary__state">{{ 'leaseQuote.summary.errorTitle' | transloco }}</p>
+    <p class="quote-summary__error-message">{{ $any(viewState()).message }}</p>
+  </div>
+}
+
+@if (viewState().status === 'success') {
+  @let quote = $any(viewState()).quote;
+
+  <div class="quote-summary">
+    <p class="quote-summary__headline">{{ 'leaseQuote.summary.monthlyPayment' | transloco }}</p>
+    <p class="quote-summary__monthly">
+      {{ quote.monthlyPayment | ldCurrency: quote.settlementCurrency : locale() }}
+    </p>
+
+    <dl class="quote-summary__grid">
+      @if (quote.vehiclePriceCurrency !== quote.settlementCurrency) {
+        <div class="quote-summary__row">
+          <dt>
+            {{
+              'leaseQuote.summary.exchangeRate'
+                | transloco: { source: quote.vehiclePriceCurrency, target: quote.settlementCurrency }
+            }}
+          </dt>
+          <dd>{{ quote.exchangeRate | ldNumber: locale() : '1.2-4' }}</dd>
+        </div>
+        @if (quote.exchangeRateDate) {
+          <div class="quote-summary__row">
+            <dt>{{ 'leaseQuote.summary.exchangeRateDate' | transloco }}</dt>
+            <dd>{{ quote.exchangeRateDate | ldDate: locale() }}</dd>
+          </div>
+        }
+      }
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.vehicleValue' | transloco }}</dt>
+        <dd>{{ quote.vehiclePriceSettlement | ldCurrency: quote.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.financedAmount' | transloco }}</dt>
+        <dd>{{ quote.financedAmount | ldCurrency: quote.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.initialPayment' | transloco }}</dt>
+        <dd>{{ quote.initialPayment | ldCurrency: quote.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.buyout' | transloco }}</dt>
+        <dd>{{ quote.buyout | ldCurrency: quote.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.total' | transloco }}</dt>
+        <dd>{{ quote.totalLeaseCost | ldCurrency: quote.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.vat' | transloco }}</dt>
+        <dd>{{ quote.estimatedVat | ldCurrency: quote.settlementCurrency : locale() }}</dd>
+      </div>
+      <div class="quote-summary__row">
+        <dt>{{ 'leaseQuote.summary.apr' | transloco }}</dt>
+        <dd>{{ quote.annualRatePercent | ldPercent: locale() }}</dd>
+      </div>
+    </dl>
+
+    <p class="quote-summary__disclaimer">
+      {{ 'leaseQuote.summary.disclaimer' | transloco }}
+    </p>
+  </div>
+}

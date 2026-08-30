@@ -9,13 +9,19 @@
 // =============================================================================
 
 export { ButtonComponent } from './button/button.component';
-export type { AppButtonVariant } from './button/button.component';
+export type { AppButtonVariant, AppButtonType } from './button/button.component';
 
 export { CardComponent } from './card/card.component';
 
 export { PageHeaderComponent } from './page-header/page-header.component';
 
 export { InputComponent } from './input/input.component';
+export type { AppInputType } from './input/input.component';
+
+export { SelectComponent } from './select/select.component';
+export type { AppSelectOption } from './select/select.component';
+
+export { CheckboxComponent } from './checkbox/checkbox.component';
 
 export { DataTableComponent } from './data-table/data-table.component';
 export type {

@@ -3,6 +3,19 @@ spring:
     name: lease-demo
   profiles:
     active: local
+  data:
+    redis:
+      # Reuses the existing shared lease-demo-redis-shared Docker container
+      # (see infrastructure/docker-compose.yml). Spring Boot runs on the
+      # HOST, so the local default port matches the container's published
+      # host port (6379). Override via REDIS_HOST/REDIS_PORT env vars for
+      # other environments.
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # Finite timeouts so a dead/unreachable Redis instance cannot hang
+      # Lease Quote requests — the cache is designed to fail open (M5.1.6).
+      connect-timeout: 1000ms
+      timeout: 500ms
 
 server:
   port: 8080
@@ -21,3 +34,18 @@ management:
 
 application:
   version: 0.1.0
+
+leasedemo:
+  lease:
+    # Current business market resolution (M5.1.2). NOT supplied by
+    # Angular — the backend is the sole authority. Will later resolve
+    # from the authenticated Customer's market instead of this static
+    # property, without changing the Lease Product API contract.
+    default-market: PL
+  cache:
+    exchange-rates:
+      # TTL for cached NBP foreign-currency -> PLN rate snapshots
+      # (nbpExchangeRates Redis cache, M5.1.6). NBP rates do not change
+      # every few seconds; 6 hours removes repetitive external calls
+      # during normal use without caching effectively-permanent data.
+      ttl: PT6H

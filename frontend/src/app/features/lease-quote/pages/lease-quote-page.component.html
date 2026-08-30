@@ -1,0 +1,38 @@
+<div class="ld-page">
+  <app-page-header [title]="'leaseQuote.title' | transloco" [subtitle]="'leaseQuote.subtitle' | transloco">
+  </app-page-header>
+
+  @if (productConfigState(); as state) {
+    @if (state.status === 'loading') {
+      <app-card class="lease-quote-page__status">
+        <p>{{ 'leaseQuote.status.loading' | transloco }}</p>
+      </app-card>
+    } @else if (state.status === 'empty') {
+      <app-card class="lease-quote-page__status">
+        <p>{{ 'leaseQuote.status.empty' | transloco }}</p>
+      </app-card>
+    } @else if (state.status === 'error') {
+      <app-card class="lease-quote-page__status">
+        <p>{{ 'leaseQuote.status.error' | transloco }}</p>
+      </app-card>
+    } @else if (state.status === 'ready') {
+      <app-card class="lease-quote-page__product">
+        <app-select
+          [label]="'leaseQuote.product.label' | transloco"
+          [options]="productOptions()"
+          [formControl]="productControl"
+        />
+      </app-card>
+
+      <div class="lease-quote-page">
+        <app-card class="lease-quote-page__parameters">
+          <app-lease-parameters [formGroup]="form" [product]="state.product" />
+        </app-card>
+
+        <app-card class="lease-quote-page__summary">
+          <app-quote-summary [viewState]="viewState()" [locale]="locale()" />
+        </app-card>
+      </div>
+    }
+  }
+</div>

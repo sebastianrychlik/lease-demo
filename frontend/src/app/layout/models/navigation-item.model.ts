@@ -6,7 +6,7 @@
  * sidebar hardcoding per-area navigation.
  */
 export interface NavigationItem {
-  /** Visible link label. */
+  /** Transloco translation key for the visible link label (static UI text — M5.1.3). */
   readonly label: string;
   /** Router route (absolute, e.g. `/admin/dashboard`). */
   readonly route: string;

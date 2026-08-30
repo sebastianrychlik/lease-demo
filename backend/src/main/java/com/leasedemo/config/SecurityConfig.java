@@ -129,6 +129,12 @@ public class SecurityConfig {
                         // route guard is UX/navigation only, not a trust boundary.
                         .requestMatchers(HttpMethod.GET, "/api/customers").hasRole("ADMIN")
 
+                        // ADMIN Lease Product management (M5.1.4): ADMIN-only. Also enforced
+                        // via @PreAuthorize on AdminLeaseProductController — declared here too
+                        // as the authoritative URL-pattern boundary, consistent with the
+                        // Admin Customer list rule above. CUSTOMER JWTs receive 403.
+                        .requestMatchers("/api/admin/lease-products/**").hasRole("ADMIN")
+
                         // All application API endpoints require a valid authenticated JWT.
                         .requestMatchers("/api/**").authenticated()
 

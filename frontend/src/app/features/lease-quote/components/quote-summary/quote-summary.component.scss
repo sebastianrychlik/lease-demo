@@ -1,0 +1,68 @@
+.quote-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+
+  &--loading .quote-summary__state {
+    color: var(--ld-color-text-secondary, #757575);
+  }
+
+  &--error .quote-summary__state {
+    color: #c62828;
+    font-weight: 600;
+  }
+
+  &__error-message {
+    color: var(--ld-color-text-secondary, #757575);
+    font-size: 0.9rem;
+  }
+
+  &__headline {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--ld-color-text-secondary, #757575);
+    margin: 0;
+  }
+
+  &__monthly {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--ld-color-primary, #1565c0);
+    margin: 0 0 0.5rem;
+  }
+
+  &__grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0;
+  }
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #eeeeee;
+
+    dt {
+      color: var(--ld-color-text-secondary, #616161);
+    }
+
+    dd {
+      margin: 0;
+      font-weight: 600;
+    }
+  }
+
+  &__disclaimer {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--ld-color-text-secondary, #9e9e9e);
+  }
+}
