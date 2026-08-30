@@ -12,6 +12,18 @@
     gap: 1rem;
     flex-wrap: wrap;
   }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 220px;
+  }
+
+  &__hint {
+    margin: -0.5rem 0 0;
+    font-size: 0.8rem;
+    color: var(--ld-color-text-secondary, #64748b);
+  }
 }
 
 .lease-application__status {
@@ -41,4 +53,10 @@
     text-align: right;
     font-weight: 600;
   }
+}
+
+$card-gap: 1rem;
+
+.lease-quote-page {
+  margin-bottom: $card-gap;
 }

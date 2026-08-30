@@ -73,6 +73,31 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Spring for Apache Kafka (M5.5 — LeaseApplication APPROVED event
+             producer/consumer). Reuses the existing lease-demo-kafka-events
+             broker container; no new broker is introduced. -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Mail (M5.5 — approval confirmation email with PDF
+             attachment). Reuses the existing lease-demo-mailpit SMTP
+             container; no real SMTP credentials are configured. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- Apache PDFBox (M5.5 — in-memory Lease Application confirmation
+             PDF, generated on the Kafka consumer side only, never persisted
+             to a database or filesystem). -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.31</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

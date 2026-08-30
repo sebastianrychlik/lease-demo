@@ -19,7 +19,13 @@ import {
 } from 'rxjs';
 
 import { LanguageService } from '../../../core/i18n/language.service';
-import { AppSelectOption, CardComponent, PageHeaderComponent, SelectComponent } from '../../../shared/ui';
+import { nonNegativeValidator } from '../../../shared/forms';
+import {
+  AppSelectOption,
+  CardComponent,
+  PageHeaderComponent,
+  SelectComponent,
+} from '../../../shared/ui';
 import { LeaseParametersComponent } from '../components/lease-parameters/lease-parameters.component';
 import { InsuranceConfiguratorComponent } from '../components/insurance-configurator/insurance-configurator.component';
 import {
@@ -27,7 +33,10 @@ import {
   LeaseApplicationFormControls,
   LeaseApplicationSubmissionState,
 } from '../components/lease-application/lease-application.component';
-import { QuoteSummaryComponent, QuoteSummaryViewState } from '../components/quote-summary/quote-summary.component';
+import {
+  QuoteSummaryComponent,
+  QuoteSummaryViewState,
+} from '../components/quote-summary/quote-summary.component';
 import { InsuranceConfiguration } from '../models/insurance.model';
 import { CreateLeaseApplicationRequest } from '../models/lease-application.model';
 import {
@@ -144,7 +153,10 @@ export class LeaseQuotePageComponent {
    */
   private readonly productConfigState$: Observable<ProductConfigViewState> = combineLatest([
     this.leaseProductService.availableProducts$,
-    this.productControl.valueChanges.pipe(startWith(this.productControl.value), distinctUntilChanged()),
+    this.productControl.valueChanges.pipe(
+      startWith(this.productControl.value),
+      distinctUntilChanged()
+    ),
   ]).pipe(
     map(([products, selectedCode]): ProductConfigViewState => {
       if (products.length === 0) {
@@ -166,7 +178,7 @@ export class LeaseQuotePageComponent {
     }),
     startWith<ProductConfigViewState>({ status: 'loading' }),
     catchError(() => of<ProductConfigViewState>({ status: 'error' })),
-    shareReplay({ bufferSize: 1, refCount: true }),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   readonly productConfigState = toSignal(this.productConfigState$, {
@@ -176,50 +188,73 @@ export class LeaseQuotePageComponent {
   /** Options for the CUSTOMER product selector — `product.code` is the value, `product.name` the label (never Transloco-translated). */
   readonly productOptions = toSignal(
     this.productConfigState$.pipe(
-      filter((state): state is { status: 'ready'; product: LeaseProductConfiguration; products: LeaseProductConfiguration[] } => state.status === 'ready'),
-      map((state): AppSelectOption<string>[] => state.products.map((product) => ({ value: product.code, label: product.name }))),
-      distinctUntilChanged(
-        (a, b) => a.length === b.length && a.every((option, index) => option.value === b[index].value && option.label === b[index].label),
+      filter(
+        (
+          state
+        ): state is {
+          status: 'ready';
+          product: LeaseProductConfiguration;
+          products: LeaseProductConfiguration[];
+        } => state.status === 'ready'
       ),
+      map((state): AppSelectOption<string>[] =>
+        state.products.map((product) => ({ value: product.code, label: product.name }))
+      ),
+      distinctUntilChanged(
+        (a, b) =>
+          a.length === b.length &&
+          a.every(
+            (option, index) => option.value === b[index].value && option.label === b[index].label
+          )
+      )
     ),
-    { initialValue: [] as AppSelectOption<string>[] },
+    { initialValue: [] as AppSelectOption<string>[] }
   );
 
   /** Only emits once product configuration has successfully loaded — gates the quote request stream. */
   private readonly selectedProduct$ = this.productConfigState$.pipe(
-    filter((state): state is { status: 'ready'; product: LeaseProductConfiguration; products: LeaseProductConfiguration[] } => state.status === 'ready'),
+    filter(
+      (
+        state
+      ): state is {
+        status: 'ready';
+        product: LeaseProductConfiguration;
+        products: LeaseProductConfiguration[];
+      } => state.status === 'ready'
+    ),
     map((state) => state.product),
-    distinctUntilChanged((a, b) => a.code === b.code),
+    distinctUntilChanged((a, b) => a.code === b.code)
   );
 
   private readonly vehiclePrice$ = this.form.controls.vehiclePrice.valueChanges.pipe(
     startWith(this.form.controls.vehiclePrice.value),
-    distinctUntilChanged(),
+    distinctUntilChanged()
   );
 
   private readonly currency$ = this.form.controls.currency.valueChanges.pipe(
     startWith(this.form.controls.currency.value),
-    distinctUntilChanged(),
+    distinctUntilChanged()
   );
 
   private readonly termMonths$ = this.form.controls.termMonths.valueChanges.pipe(
     startWith(this.form.controls.termMonths.value),
-    distinctUntilChanged(),
+    distinctUntilChanged()
   );
 
-  private readonly initialPaymentPercent$ = this.form.controls.initialPaymentPercent.valueChanges.pipe(
-    startWith(this.form.controls.initialPaymentPercent.value),
-    distinctUntilChanged(),
-  );
+  private readonly initialPaymentPercent$ =
+    this.form.controls.initialPaymentPercent.valueChanges.pipe(
+      startWith(this.form.controls.initialPaymentPercent.value),
+      distinctUntilChanged()
+    );
 
   private readonly buyoutPercent$ = this.form.controls.buyoutPercent.valueChanges.pipe(
     startWith(this.form.controls.buyoutPercent.value),
-    distinctUntilChanged(),
+    distinctUntilChanged()
   );
 
   private readonly leaseType$ = this.form.controls.leaseType.valueChanges.pipe(
     startWith(this.form.controls.leaseType.value),
-    distinctUntilChanged(),
+    distinctUntilChanged()
   );
 
   /**
@@ -239,7 +274,15 @@ export class LeaseQuotePageComponent {
   ]).pipe(
     debounceTime(RECALCULATION_DEBOUNCE_MS),
     map(
-      ([product, vehiclePrice, currency, termMonths, initialPaymentPercent, buyoutPercent, leaseType]): LeaseQuoteRequest => ({
+      ([
+        product,
+        vehiclePrice,
+        currency,
+        termMonths,
+        initialPaymentPercent,
+        buyoutPercent,
+        leaseType,
+      ]): LeaseQuoteRequest => ({
         productCode: product.code,
         vehiclePrice,
         vehiclePriceCurrency: currency,
@@ -247,18 +290,18 @@ export class LeaseQuotePageComponent {
         initialPaymentPercent,
         buyoutPercent,
         leaseType,
-      }),
+      })
     ),
     switchMap((request) =>
       this.leaseQuoteService.calculate(request).pipe(
         map((quote): QuoteSummaryViewState => ({ status: 'success', quote })),
         startWith<QuoteSummaryViewState>({ status: 'loading' }),
         catchError((error: unknown) =>
-          of<QuoteSummaryViewState>({ status: 'error', message: this.mapQuoteError(error) }),
-        ),
-      ),
+          of<QuoteSummaryViewState>({ status: 'error', message: this.mapQuoteError(error) })
+        )
+      )
     ),
-    shareReplay({ bufferSize: 1, refCount: true }),
+    shareReplay({ bufferSize: 1, refCount: true })
   );
 
   readonly viewState = toSignal(this.viewState$, {
@@ -285,10 +328,10 @@ export class LeaseQuotePageComponent {
    */
   readonly applicationForm = new FormGroup<LeaseApplicationFormControls>({
     monthlyNetIncome: new FormControl<number | null>(null, {
-      validators: [Validators.required, Validators.min(0.01)],
+      validators: [Validators.required, Validators.min(0), nonNegativeValidator()],
     }),
     monthlyObligations: new FormControl<number | null>(null, {
-      validators: [Validators.required, Validators.min(0)],
+      validators: [Validators.required, Validators.min(0), nonNegativeValidator()],
     }),
   });
 
@@ -297,16 +340,25 @@ export class LeaseQuotePageComponent {
 
   /** Apply is enabled only when product + quote are ready, the form is valid, and not already submitting (M5.3 §30). */
   readonly canApply = toSignal(
-    combineLatest([this.viewState$, this.applicationForm.statusChanges.pipe(startWith(this.applicationForm.status))]).pipe(
+    combineLatest([
+      this.viewState$,
+      this.applicationForm.statusChanges.pipe(startWith(this.applicationForm.status)),
+    ]).pipe(
       map(
         ([quoteState, formStatus]) =>
-          quoteState.status === 'success' && formStatus === 'VALID' && this.applicationState().status !== 'submitting',
-      ),
+          quoteState.status === 'success' &&
+          formStatus === 'VALID' &&
+          this.applicationState().status !== 'submitting'
+      )
     ),
-    { initialValue: false },
+    { initialValue: false }
   );
 
   onApply(): void {
+    if (this.applicationForm.invalid) {
+      this.applicationForm.markAllAsTouched();
+      return;
+    }
     const quoteState = this.viewState();
     const product = this.productConfigState();
     if (quoteState.status !== 'success' || product.status !== 'ready') {
@@ -337,7 +389,8 @@ export class LeaseQuotePageComponent {
     this.applicationState.set({ status: 'submitting' });
     this.leaseApplicationService.submitApplication(request).subscribe({
       next: (result) => this.applicationState.set({ status: 'success', result }),
-      error: (error: unknown) => this.applicationState.set({ status: 'error', message: this.mapApplicationError(error) }),
+      error: (error: unknown) =>
+        this.applicationState.set({ status: 'error', message: this.mapApplicationError(error) }),
     });
   }
 

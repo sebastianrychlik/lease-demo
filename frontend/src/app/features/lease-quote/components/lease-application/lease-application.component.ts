@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Output, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Output, inject, input } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 
+import { resolveValidationMessage } from '../../../../shared/forms';
 import { ButtonComponent, CardComponent, InputComponent } from '../../../../shared/ui';
 import { LdCurrencyPipe } from '../../../../shared/pipes/ld-currency.pipe';
 import { LeaseApplicationResponse } from '../../models/lease-application.model';
@@ -54,7 +55,26 @@ export class LeaseApplicationComponent {
   /** Emitted when the CUSTOMER clicks Apply. */
   @Output() readonly apply = new EventEmitter<void>();
 
+  private readonly transloco = inject(TranslocoService);
+
   onApply(): void {
     this.apply.emit();
+  }
+
+  /**
+   * Translated validation message for a financial field, shown only after
+   * the CUSTOMER has interacted with it (M5.5.1) — never before `touched`.
+   */
+  errorMessage(controlName: keyof LeaseApplicationFormControls): string | undefined {
+    const control = this.formGroup().controls[controlName];
+    if (!control.touched) {
+      return undefined;
+    }
+    return resolveValidationMessage(this.transloco, control.errors);
+  }
+
+  isInvalid(controlName: keyof LeaseApplicationFormControls): boolean {
+    const control = this.formGroup().controls[controlName];
+    return control.invalid && control.touched;
   }
 }

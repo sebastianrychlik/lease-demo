@@ -12,7 +12,7 @@
   </div>
 
   <mat-accordion multi="true" [formGroup]="form">
-    <div formArrayName="coverages">
+    <div formArrayName="coverages" class="insurance-configurator__panels">
       @for (group of coverageGroups(); track group.controls.code.value; let i = $index) {
         @let definition = definitionFor(group.controls.code.value);
         <mat-expansion-panel [formGroupName]="i" class="insurance-configurator__panel">
